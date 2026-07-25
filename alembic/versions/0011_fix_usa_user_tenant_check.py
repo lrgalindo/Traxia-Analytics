@@ -8,13 +8,13 @@ by a tenant admin who knows the foreign user's UUID.
 The fix adds an EXISTS subquery on `users` to both policies, making them
 structurally symmetric: site_id tenant check + user_id tenant check.
 
-Revision ID: 0010
-Revises: 0009
+Revision ID: 0011
+Revises: 0010 (0010_superadmin_password_hash from fase-a-hardening)
 Create Date: 2026-07-25
 """
 
-revision = "0010"
-down_revision = "0009"
+revision = "0011"
+down_revision = "0010"
 branch_labels = None
 depends_on = None
 

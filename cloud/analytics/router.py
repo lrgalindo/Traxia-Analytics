@@ -16,6 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from cloud.analytics.geometry import polygon_self_intersects
 from cloud.auth.deps import _require_user_token
 from cloud.db import user_conn
+from cloud.findings.router import _presign_snapshot
 
 router = APIRouter(prefix="/v1", tags=["analytics"])
 
@@ -106,27 +107,44 @@ def list_cameras(
     with user_conn(token) as cur:
         if site_id and site_id != 'all':
             cur.execute(
-                "SELECT id::text, name, site_id::text, stream_url FROM cameras WHERE site_id = %s ORDER BY name",
+                "SELECT id::text, name, site_id::text, status FROM cameras WHERE site_id = %s ORDER BY name",
                 [site_id],
             )
         else:
-            cur.execute("SELECT id::text, name, site_id::text, stream_url FROM cameras ORDER BY name")
+            cur.execute("SELECT id::text, name, site_id::text, status FROM cameras ORDER BY name")
         return cur.fetchall()
 
 
 @router.get("/cameras/{camera_id}/snapshot")
 def get_snapshot(camera_id: str, token: dict = Depends(_require_user_token)) -> Dict[str, Any]:
-    # Snapshot URLs are pre-signed R2 links stored per camera.
-    # Returns the URL so the frontend can render the image directly.
+    # Look up the most recent snapshot R2 key from agent_findings for zones
+    # on this camera, then generate a short-lived pre-signed URL on demand.
     with user_conn(token) as cur:
+        cur.execute("SELECT id FROM cameras WHERE id = %s", [camera_id])
+        if not cur.fetchone():
+            raise HTTPException(status_code=404, detail="camera_not_found")
+
         cur.execute(
-            "SELECT snapshot_url FROM cameras WHERE id = %s",
+            """
+            SELECT af.detail->>'snapshot_r2_key' AS r2_key
+              FROM agent_findings af
+              JOIN zones z ON z.id = af.zone_id
+             WHERE z.camera_id = %s
+               AND af.detail ? 'snapshot_r2_key'
+             ORDER BY af.created_at DESC
+             LIMIT 1
+            """,
             [camera_id],
         )
         row = cur.fetchone()
-        if not row:
-            raise HTTPException(status_code=404, detail="camera_not_found")
-        return {"snapshot_url": row["snapshot_url"]}
+
+    if not row:
+        raise HTTPException(status_code=404, detail="no_snapshot_available")
+
+    url = _presign_snapshot(row["r2_key"])
+    if url is None:
+        raise HTTPException(status_code=503, detail="snapshot_storage_not_configured")
+    return {"snapshot_url": url}
 
 
 @router.get("/zones")

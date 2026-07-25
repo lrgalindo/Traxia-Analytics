@@ -19,33 +19,12 @@ The download endpoint itself requires no auth (mirrors R2 pre-signed URL behavio
 
 import os
 
-from fastapi import APIRouter, Depends, HTTPException, Response, Security, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel
 
-import jwt
-
-from cloud import config
+from cloud.auth.deps import require_gateway_token
 
 router = APIRouter(prefix="/v1/models")
-
-_bearer = HTTPBearer()
-
-
-def _require_gateway_token(
-    creds: HTTPAuthorizationCredentials = Security(_bearer),
-) -> dict:
-    """Verify a JWT access token issued by POST /v1/edge/token/activate or /refresh."""
-    try:
-        return jwt.decode(
-            creds.credentials,
-            config.JWT_SECRET,
-            algorithms=[config.JWT_ALGORITHM],
-        )
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="token_expired")
-    except jwt.PyJWTError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid_token")
 
 
 _VALID_VERTICALS = {"retail", "banking", "logistics"}
@@ -130,7 +109,7 @@ class Manifest(BaseModel):
 @router.get("/{vertical_type}/manifest", response_model=Manifest)
 def get_manifest(
     vertical_type: str,
-    _token: dict = Depends(_require_gateway_token),
+    _token: dict = Depends(require_gateway_token),
 ) -> Manifest:
     if vertical_type not in _VALID_VERTICALS:
         raise HTTPException(status_code=404, detail="unknown_vertical")

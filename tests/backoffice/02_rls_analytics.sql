@@ -64,16 +64,17 @@ VALUES
 ON CONFLICT DO NOTHING;
 
 -- One zone per partner (both on cam_a1 to isolate the partner filter, not camera filter)
+-- chk_zone_owner_exclusive: PARTNER zones must have owner_tenant_id = NULL
 INSERT INTO zones (id, camera_id, owner_type, owner_partner_id, owner_tenant_id, name, zone_type, coordinates)
 VALUES
   ('bb320000-0000-0000-0000-000000000001',
    'bb100000-0000-4000-8000-000000000004',
-   'PARTNER', 'bb300000-0000-0000-0000-000000000001', 'bb100000-0000-4000-8000-000000000001',
+   'PARTNER', 'bb300000-0000-0000-0000-000000000001', NULL,
    'Zone P1', 'shelf',
    '{"type":"polygon","points":[[0,0],[50,0],[50,50],[0,50]]}'::jsonb),
   ('bb320000-0000-0000-0000-000000000002',
    'bb100000-0000-4000-8000-000000000004',
-   'PARTNER', 'bb300000-0000-0000-0000-000000000002', 'bb100000-0000-4000-8000-000000000001',
+   'PARTNER', 'bb300000-0000-0000-0000-000000000002', NULL,
    'Zone Q1', 'shelf',
    '{"type":"polygon","points":[[100,0],[150,0],[150,50],[100,50]]}'::jsonb)
 ON CONFLICT DO NOTHING;

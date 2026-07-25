@@ -20,35 +20,16 @@ from datetime import datetime
 
 import psycopg2
 import psycopg2.extras
-from fastapi import APIRouter, Depends, HTTPException, Security
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-import jwt
-
-from cloud import config
+from cloud.auth.deps import require_gateway_token
 from cloud.db import app_conn
 
 router = APIRouter()
-_bearer = HTTPBearer()
 
 _maintenance_until: float = 0.0
 _maintenance_lock = threading.Lock()
-
-
-def _require_gateway_token(
-    creds: HTTPAuthorizationCredentials = Security(_bearer),
-) -> dict:
-    try:
-        return jwt.decode(
-            creds.credentials,
-            config.JWT_SECRET,
-            algorithms=[config.JWT_ALGORITHM],
-        )
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="token_expired")
-    except jwt.PyJWTError:
-        raise HTTPException(status_code=401, detail="invalid_token")
 
 
 class TrackingEvent(BaseModel):
@@ -62,7 +43,7 @@ class TrackingEvent(BaseModel):
 @router.post("/v1/telemetry/ingest", status_code=204)
 def ingest(
     event: TrackingEvent,
-    token: dict = Depends(_require_gateway_token),
+    token: dict = Depends(require_gateway_token),
 ) -> None:
     with _maintenance_lock:
         if time.time() < _maintenance_until:

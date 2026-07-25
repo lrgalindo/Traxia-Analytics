@@ -42,3 +42,28 @@ def require_tenant_admin(
     if token.get("role") != "admin" or token.get("pid") is not None:
         raise HTTPException(status_code=403, detail="tenant_admin_required")
     return token
+
+
+def require_gateway_token(
+    creds: HTTPAuthorizationCredentials = Security(_bearer),
+) -> dict:
+    """Decode a gateway access token and verify it is not a user token.
+
+    Gateway tokens carry 'sid' (site_id) but never 'tid' (tenant_id).
+    User tokens carry 'tid'.  Without this check, a user JWT signed with the
+    same JWT_SECRET would pass a bare jwt.decode() in all three gateway routers.
+    """
+    try:
+        payload = jwt.decode(
+            creds.credentials,
+            config.JWT_SECRET,
+            algorithms=[config.JWT_ALGORITHM],
+        )
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="token_expired")
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="invalid_token")
+
+    if "sid" not in payload or "tid" in payload:
+        raise HTTPException(status_code=401, detail="not_a_gateway_token")
+    return payload

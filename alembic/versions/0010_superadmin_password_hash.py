@@ -10,24 +10,13 @@ Revises: 0009
 revision = "0010"
 down_revision = "0009"
 
-_SQL_UP = """
-ALTER TABLE platform_admins ADD COLUMN password_hash TEXT NOT NULL DEFAULT '';
--- Remove the synthetic default immediately so new rows must supply a hash.
-ALTER TABLE platform_admins ALTER COLUMN password_hash DROP DEFAULT;
-"""
-
-_SQL_DOWN = """
-ALTER TABLE platform_admins DROP COLUMN IF EXISTS password_hash;
-"""
+from alembic import op
 
 
-def upgrade(conn):
-    with conn.cursor() as cur:
-        cur.execute(_SQL_UP)
-    conn.commit()
+def upgrade() -> None:
+    op.execute("ALTER TABLE platform_admins ADD COLUMN password_hash TEXT NOT NULL DEFAULT '';")
+    op.execute("ALTER TABLE platform_admins ALTER COLUMN password_hash DROP DEFAULT;")
 
 
-def downgrade(conn):
-    with conn.cursor() as cur:
-        cur.execute(_SQL_DOWN)
-    conn.commit()
+def downgrade() -> None:
+    op.execute("ALTER TABLE platform_admins DROP COLUMN IF EXISTS password_hash;")

@@ -69,18 +69,19 @@ SELECT lives_ok(
 );
 
 -- ── Test 5: traxia_app admin CANNOT UPDATE tenant status ─────────────────────
--- traxia_app has only SELECT on tenants via tenants_read policy — no UPDATE policy.
+-- traxia_app has UPDATE privilege but no RLS UPDATE policy on tenants.
+-- PostgreSQL silently blocks the UPDATE (0 rows affected), not 42501.
+-- We verify by attempting to revert the status and confirming it stays 'active'.
 SET LOCAL ROLE traxia_app;
 SET LOCAL app.current_tenant_id   = 'cc100000-0000-4000-8000-000000000001';
 SET LOCAL app.current_actor_role  = 'admin';
 
-SELECT throws_ok(
-  $$
-  UPDATE tenants SET status = 'active' WHERE id = 'cc100000-0000-4000-8000-000000000001'
-  $$,
-  '42501',
-  NULL,
-  'traxia_app admin CANNOT UPDATE tenant status (no lifecycle policy for app role)'
+UPDATE tenants SET status = 'onboarding' WHERE id = 'cc100000-0000-4000-8000-000000000001';
+
+SELECT is(
+  (SELECT status FROM tenants WHERE id = 'cc100000-0000-4000-8000-000000000001'),
+  'active',
+  'traxia_app admin CANNOT UPDATE tenant status (silently blocked by RLS — 0 rows affected)'
 );
 
 -- ── Tests 6-8: gateway activate UPDATE with tenant status check ───────────────
@@ -89,6 +90,9 @@ SELECT throws_ok(
 -- (traxia_service runs these because service_conn() is used by auth/router.py)
 
 SET LOCAL ROLE traxia_service;
+
+-- Restore Tenant B to 'active' before the positive-case test (test 4 set it inactive)
+UPDATE tenants SET status = 'active' WHERE id = 'cc200000-0000-4000-8000-000000000001';
 
 -- Test 6: onboarding tenant gateway activation blocked
 SELECT is(

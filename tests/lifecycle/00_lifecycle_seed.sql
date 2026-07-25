@@ -2,8 +2,9 @@
 -- Self-contained: uses ON CONFLICT DO NOTHING so it is safe to re-run.
 
 -- Platform admin (SuperAdmin) for lifecycle tests
-INSERT INTO platform_admins (id, email, status) VALUES
-  ('cc000000-0000-4000-8000-000000000001', 'superadmin@traxia-test.com', 'active')
+-- password_hash is required (NOT NULL) since migration 0010; dummy hash for test-only rows
+INSERT INTO platform_admins (id, email, status, password_hash) VALUES
+  ('cc000000-0000-4000-8000-000000000001', 'superadmin@traxia-test.com', 'active', '$2b$12$test-seed-placeholder-hash-only')
 ON CONFLICT DO NOTHING;
 
 -- Reseller for lifecycle tests

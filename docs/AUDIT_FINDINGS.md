@@ -15,7 +15,7 @@ Findings are ordered by the priority established at the close of the audit sessi
 
 **File:** `cloud/lifecycle/router.py` — `approve_tenant()`, the `ON CONFLICT DO UPDATE` clause  
 **Severity:** High — active security gap  
-**Status:** Open
+**Status:** ✅ Fixed — closure batch commit
 
 When `POST /v1/superadmin/tenants/{id}/approve` is called with a `gateway_id` that already
 exists (the hardware-replacement scenario described in SDD §8.7 Flow 7), the
@@ -49,7 +49,7 @@ Same pattern already used by `deactivate_tenant()` in the same file.
 
 **File:** `cloud/analytics/router.py` — `list_cameras()` line 108, `get_snapshot()` line 122  
 **Severity:** High — runtime crash on any call to these endpoints  
-**Status:** Open — design decision required
+**Status:** ✅ Fixed — closure batch commit
 
 `list_cameras()` selects `stream_url` from `cameras`; `get_snapshot()` selects
 `snapshot_url`. Neither column exists in any migration in any branch. The schema
@@ -72,7 +72,7 @@ This is not a missing migration — it is code written against a model of the
 
 **File:** `alembic/versions/0011_fix_usa_user_tenant_check.py`  
 **Severity:** Medium — fix exists and is correct; needs runtime confirmation  
-**Status:** Pending verification
+**Status:** ✅ Verified — `alembic upgrade head` ran 0009→0010→0011 clean; `alembic current` shows `0011 (head)`. Also fixed `0010_superadmin_password_hash.py` which used non-standard `upgrade(conn)` signature instead of `op.execute()`.
 
 The cross-tenant user assignment bug (Gap 7 from the initial audit) was fixed in migration
 `0010`, then renumbered to `0011` after discovering that `fase-a-hardening` already has a
@@ -94,7 +94,7 @@ pgTAP regression tests are already written (tests 14 and 15 in
 
 **File:** `cloud/auth/router.py` — `refresh()` endpoint, `refresh_token_prev_hash` logic  
 **Severity:** High (mechanism complexity warrants coverage)  
-**Status:** Open
+**Status:** ✅ Covered — `tests/lifecycle/test_refresh_grace.py::test_grace_window_three_step_sequence` (PASSED)
 
 The grace-window is the most complex invariant in the token system and the one most
 likely to break under future refactors. No test exercises the full sequence:
@@ -111,7 +111,7 @@ Test location: create `tests/lifecycle/test_refresh_grace.py` (requires real DB)
 
 **File:** `cloud/actions/channels.py`, `cloud/actions/engine.py`  
 **Severity:** High (financial audit trail — silent breakage has billing consequences)  
-**Status:** Open
+**Status:** ✅ Covered — `tests/actions/test_channels.py` (6 tests, all PASSED)
 
 The mechanism that populates `action_log.meta_cost_usd` only for WhatsApp (never for
 Slack/Telegram/Email) is correct today but unguarded. If `channels.py` is modified
@@ -133,7 +133,7 @@ Tests needed:
 
 **File:** `cloud/telemetry/router.py`, `alembic/versions/0004_ingest_sec_definer.py`  
 **Severity:** High (core isolation invariant)  
-**Status:** Open
+**Status:** ✅ Covered — `tests/gateway/07_ingest_isolation.sql` (5 tests: 2 positive + 3 negative, all PASSED). Confirmed present and wired in `tests/run_tests.sh`.
 
 The `tracking_coordinates_ingest` RLS policy (via `sec_camera_on_ingest_site()`) correctly
 blocks an Edge Gateway from injecting events with a `camera_id` belonging to a different
@@ -151,7 +151,7 @@ that `camera_id` in `tracking_coordinates`.
 **Files:** `cloud/actions/router.py` (also has `_require_admin`), `cloud/models/router.py`,
 `cloud/telemetry/router.py`  
 **Severity:** Medium-High (divergence risk; token type validation absent)  
-**Status:** Open
+**Status:** ✅ Fixed — `require_gateway_token` added to `cloud/auth/deps.py` with `sid`/`tid` claim check. All three routers now import from `deps.py`. `cloud/actions/router.py` also replaced `_require_admin` with `require_tenant_admin` (tighter: also blocks partner-scoped admins).
 
 Three routers implement their own `jwt.decode()` instead of importing from `cloud/auth/deps.py`.
 This is not just a DRY violation: none of the three verify that the token is actually a
@@ -208,7 +208,17 @@ themselves, not inherit a generic placeholder. Low cost to fix: add `site_name: 
 | `tests/isolation/00_seed.sql` recovered | `ca6aaf6` | Was referenced by `run_tests.sh` but missing |
 | `tests/backoffice/00_seed.sql` created | `ca6aaf6` | New, uuid-prefixed to avoid collision |
 | `tests/run_tests.sh` wired backoffice suite | `ca6aaf6` | Was orphaned; now runs in CI |
-| `lifecycle/router.py` dead imports removed | staged | `psycopg2`, `config`, `Any`, `Dict`, `Optional` |
+| `lifecycle/router.py` dead imports removed | `ca6aaf6` | `psycopg2`, `config`, `Any`, `Dict`, `Optional` |
+| **F-3** Migration 0011 verified; 0010 Alembic signature fixed | closure batch | `alembic upgrade head` runs 0001→0011 clean |
+| **F-1** `approve_tenant()` ON CONFLICT now nulls refresh tokens | closure batch | 4 NULL assignments added; `test_reapprove_nulls_existing_refresh_token` passes |
+| **F-4** Grace-window 3-step regression test | closure batch | `tests/lifecycle/test_refresh_grace.py` — 1 test, PASSED |
+| **F-5** `meta_cost_usd` channel dispatch tests | closure batch | `tests/actions/test_channels.py` — 6 tests, all PASSED |
+| **F-6** Cross-site ingest confirmed covered | closure batch | `tests/gateway/07_ingest_isolation.sql` — 5 tests, confirmed in run_tests.sh |
+| **F-7** `require_gateway_token` unified in `deps.py` | closure batch | All 3 routers import from deps; claim validation added |
+| **F-2** `list_cameras()` / `get_snapshot()` fixed | closure batch | Removed non-existent columns; snapshot uses `_presign_snapshot` via agent_findings |
+| `tests/backoffice/02_rls_analytics.sql` PARTNER zone insert | closure batch | Fixed `owner_tenant_id = NULL` for PARTNER zones (constraint violation) |
+| `tests/lifecycle/00_lifecycle_seed.sql` `password_hash` | closure batch | Added NOT NULL `password_hash` after migration 0010 |
+| `tests/lifecycle/01_rls_lifecycle.sql` tests 5 and 8 | closure batch | Test 5: silent block (0 rows) not 42501; Test 8: restore tenant B before positive check |
 
 ---
 

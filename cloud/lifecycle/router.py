@@ -161,9 +161,13 @@ def approve_tenant(
             VALUES (%s, %s, %s, 'offline', %s,
                    now() + INTERVAL %s)
             ON CONFLICT (id) DO UPDATE
-               SET activation_code_hash       = EXCLUDED.activation_code_hash,
-                   activation_code_expires_at = EXCLUDED.activation_code_expires_at,
-                   status                     = 'offline'
+               SET activation_code_hash          = EXCLUDED.activation_code_hash,
+                   activation_code_expires_at    = EXCLUDED.activation_code_expires_at,
+                   status                        = 'offline',
+                   refresh_token_hash            = NULL,
+                   refresh_token_prev_hash       = NULL,
+                   refresh_token_expires_at      = NULL,
+                   refresh_token_prev_expires_at = NULL
             RETURNING id,
                       activation_code_expires_at::text AS expires_at
             """,

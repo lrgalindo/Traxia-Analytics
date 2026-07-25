@@ -30,18 +30,13 @@ from typing import Any, Dict, List, Optional
 
 import psycopg2
 import psycopg2.extras
-from fastapi import APIRouter, Depends, HTTPException, Security, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
-import jwt
-
-from cloud import config
+from cloud.auth.deps import require_tenant_admin, _require_user_token as _require_user
 from cloud.db import user_conn
 
 router = APIRouter(prefix="/v1/actions", tags=["actions"])
-
-_bearer = HTTPBearer()
 
 VALID_RULE_TYPES = (
     "threshold",
@@ -50,27 +45,6 @@ VALID_RULE_TYPES = (
     "sop_unattended_customer",
 )
 VALID_CHANNEL_TYPES = ("slack", "telegram", "email", "whatsapp")
-
-
-# ── Auth dependency ───────────────────────────────────────────────────────────
-
-def _require_user(
-    creds: HTTPAuthorizationCredentials = Security(_bearer),
-) -> dict:
-    try:
-        return jwt.decode(
-            creds.credentials, config.JWT_SECRET, algorithms=[config.JWT_ALGORITHM]
-        )
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(401, "token_expired")
-    except jwt.PyJWTError:
-        raise HTTPException(401, "invalid_token")
-
-
-def _require_admin(token: dict = Depends(_require_user)) -> dict:
-    if token.get("role") != "admin":
-        raise HTTPException(403, "admin_required")
-    return token
 
 
 # ── Request / Response models ─────────────────────────────────────────────────
@@ -152,7 +126,7 @@ _SOP_DEFAULTS: Dict[str, Dict] = {
 # ── Rules endpoints ───────────────────────────────────────────────────────────
 
 @router.post("/rules", status_code=201)
-def create_rule(body: RuleCreate, token: dict = Depends(_require_admin)) -> Dict:
+def create_rule(body: RuleCreate, token: dict = Depends(require_tenant_admin)) -> Dict:
     if body.rule_type not in VALID_RULE_TYPES:
         raise HTTPException(422, f"invalid rule_type; valid: {VALID_RULE_TYPES}")
     with user_conn(token) as cur:
@@ -217,7 +191,7 @@ def get_rule(rule_id: str, token: dict = Depends(_require_user)) -> Dict:
 
 
 @router.put("/rules/{rule_id}")
-def update_rule(rule_id: str, body: RuleUpdate, token: dict = Depends(_require_admin)) -> Dict:
+def update_rule(rule_id: str, body: RuleUpdate, token: dict = Depends(require_tenant_admin)) -> Dict:
     if body.rule_type and body.rule_type not in VALID_RULE_TYPES:
         raise HTTPException(422, "invalid rule_type")
     with user_conn(token) as cur:
@@ -259,7 +233,7 @@ def update_rule(rule_id: str, body: RuleUpdate, token: dict = Depends(_require_a
 
 
 @router.delete("/rules/{rule_id}", status_code=204)
-def delete_rule(rule_id: str, token: dict = Depends(_require_admin)) -> None:
+def delete_rule(rule_id: str, token: dict = Depends(require_tenant_admin)) -> None:
     with user_conn(token) as cur:
         cur.execute("DELETE FROM action_rules WHERE id = %s", (rule_id,))
         if cur.rowcount == 0:
@@ -267,7 +241,7 @@ def delete_rule(rule_id: str, token: dict = Depends(_require_admin)) -> None:
 
 
 @router.post("/rules/{rule_id}/channels/{channel_id}", status_code=204)
-def bind_channel(rule_id: str, channel_id: str, token: dict = Depends(_require_admin)) -> None:
+def bind_channel(rule_id: str, channel_id: str, token: dict = Depends(require_tenant_admin)) -> None:
     with user_conn(token) as cur:
         cur.execute(
             "INSERT INTO action_rule_channels (rule_id, channel_id) VALUES (%s, %s) "
@@ -277,7 +251,7 @@ def bind_channel(rule_id: str, channel_id: str, token: dict = Depends(_require_a
 
 
 @router.delete("/rules/{rule_id}/channels/{channel_id}", status_code=204)
-def unbind_channel(rule_id: str, channel_id: str, token: dict = Depends(_require_admin)) -> None:
+def unbind_channel(rule_id: str, channel_id: str, token: dict = Depends(require_tenant_admin)) -> None:
     with user_conn(token) as cur:
         cur.execute(
             "DELETE FROM action_rule_channels WHERE rule_id = %s AND channel_id = %s",
@@ -288,7 +262,7 @@ def unbind_channel(rule_id: str, channel_id: str, token: dict = Depends(_require
 # ── SOP template factory ──────────────────────────────────────────────────────
 
 @router.post("/rules/from-template", status_code=201)
-def create_from_template(body: SopTemplateRequest, token: dict = Depends(_require_admin)) -> Dict:
+def create_from_template(body: SopTemplateRequest, token: dict = Depends(require_tenant_admin)) -> Dict:
     """Instantiate a pre-defined SOP compliance rule without writing it from scratch."""
     defaults = _SOP_DEFAULTS.get(body.template)
     if defaults is None:
@@ -328,7 +302,7 @@ def create_from_template(body: SopTemplateRequest, token: dict = Depends(_requir
 # ── Channels endpoints ────────────────────────────────────────────────────────
 
 @router.post("/channels", status_code=201)
-def create_channel(body: ChannelCreate, token: dict = Depends(_require_admin)) -> Dict:
+def create_channel(body: ChannelCreate, token: dict = Depends(require_tenant_admin)) -> Dict:
     if body.channel_type not in VALID_CHANNEL_TYPES:
         raise HTTPException(422, f"invalid channel_type; valid: {VALID_CHANNEL_TYPES}")
     if body.channel_type == "whatsapp" and body.whatsapp_cost_per_conversation_usd is None:
@@ -374,7 +348,7 @@ def list_channels(token: dict = Depends(_require_user)) -> List[Dict]:
 
 @router.put("/channels/{channel_id}")
 def update_channel(
-    channel_id: str, body: ChannelUpdate, token: dict = Depends(_require_admin)
+    channel_id: str, body: ChannelUpdate, token: dict = Depends(require_tenant_admin)
 ) -> Dict:
     with user_conn(token) as cur:
         cur.execute(
@@ -406,7 +380,7 @@ def update_channel(
 
 
 @router.delete("/channels/{channel_id}", status_code=204)
-def delete_channel(channel_id: str, token: dict = Depends(_require_admin)) -> None:
+def delete_channel(channel_id: str, token: dict = Depends(require_tenant_admin)) -> None:
     with user_conn(token) as cur:
         cur.execute("DELETE FROM action_channels WHERE id = %s", (channel_id,))
         if cur.rowcount == 0:

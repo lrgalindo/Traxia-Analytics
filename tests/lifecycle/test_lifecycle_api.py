@@ -82,8 +82,8 @@ def seed(db: psycopg2.extras.RealDictCursor):
     reseller_id = _uid()
 
     db.execute(
-        "INSERT INTO platform_admins (id, email, status) VALUES (%s, %s, 'active')",
-        (admin_id, f"sa-{admin_id[:8]}@traxia-test.com"),
+        "INSERT INTO platform_admins (id, email, status, password_hash) VALUES (%s, %s, 'active', %s)",
+        (admin_id, f"sa-{admin_id[:8]}@traxia-test.com", "$2b$12$test-seed-placeholder-hash-only"),
     )
     db.execute(
         "INSERT INTO resellers (id, name, status) VALUES (%s, %s, 'active')",
@@ -380,4 +380,80 @@ def test_revoked_gateway_cannot_refresh(
     )
     assert resp.status_code == 401, (
         f"Revoked gateway must not refresh; got {resp.status_code}"
+    )
+
+
+def test_reapprove_nulls_existing_refresh_token(
+    db: psycopg2.extras.RealDictCursor,
+    seed: dict,
+):
+    """F-1 regression: re-approving an online gateway must null its refresh token.
+
+    Scenario: hardware replacement — the same gateway_id is re-approved while
+    a live refresh token is still on the row.  The old token must be revoked so
+    the replaced device cannot call /refresh for up to 90 more days.
+    """
+    tenant_id = _uid()
+    site_id = _uid()
+    gw_id = f"gw-reapprove-{_uid()[:8]}"
+    old_refresh_plain, old_refresh_hash = new_opaque_token()
+    _, old_prev_hash = new_opaque_token()
+
+    # Arrange: tenant approved, gateway online with a live refresh token
+    db.execute(
+        "INSERT INTO tenants (id, reseller_id, name, vertical_type, status, contact_email) "
+        "VALUES (%s, %s, 'ReApprove Tenant', 'retail', 'onboarding', 'rap@test.com')",
+        (tenant_id, seed["reseller_id"]),
+    )
+    db.execute(
+        "INSERT INTO sites (id, tenant_id, name, status) VALUES (%s, %s, 'RAS', 'active')",
+        (site_id, tenant_id),
+    )
+    db.execute(
+        """
+        INSERT INTO edge_gateways
+            (id, site_id, vertical_type, status,
+             refresh_token_hash, refresh_token_prev_hash,
+             refresh_token_expires_at, refresh_token_prev_expires_at)
+        VALUES (%s, %s, 'retail', 'online', %s, %s,
+                now() + interval '90 days', now() + interval '1 day')
+        """,
+        (gw_id, site_id, old_refresh_hash, old_prev_hash),
+    )
+    db.connection.commit()
+
+    # Act: re-approve the tenant (gateway_id already exists → ON CONFLICT path)
+    resp = client.post(
+        f"/v1/superadmin/tenants/{tenant_id}/approve",
+        json={"gateway_id": gw_id, "vertical_type": "retail"},
+        headers=_sa_header(seed["admin_id"]),
+    )
+    assert resp.status_code == 200, resp.text
+
+    # Assert: all four token columns are NULL on the re-approved row
+    db.execute(
+        """
+        SELECT refresh_token_hash, refresh_token_prev_hash,
+               refresh_token_expires_at, refresh_token_prev_expires_at
+          FROM edge_gateways WHERE id = %s
+        """,
+        (gw_id,),
+    )
+    gw = db.fetchone()
+    assert gw["refresh_token_hash"] is None, \
+        "re-approval must null refresh_token_hash (old device must not refresh)"
+    assert gw["refresh_token_prev_hash"] is None, \
+        "re-approval must null refresh_token_prev_hash"
+    assert gw["refresh_token_expires_at"] is None, \
+        "re-approval must null refresh_token_expires_at"
+    assert gw["refresh_token_prev_expires_at"] is None, \
+        "re-approval must null refresh_token_prev_expires_at"
+
+    # Assert: the old refresh token is now rejected at /refresh
+    resp2 = client.post(
+        "/v1/edge/token/refresh",
+        json={"gateway_id": gw_id, "refresh_token": old_refresh_plain},
+    )
+    assert resp2.status_code == 401, (
+        f"Old refresh token must be rejected after re-approval; got {resp2.status_code}"
     )

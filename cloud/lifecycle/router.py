@@ -20,14 +20,10 @@ Authorization:
       PLATFORM_ADMIN_SECRET, "sa": true claim verified + live DB check.
 """
 import secrets
-from typing import Any, Dict, Optional
 
-import psycopg2
-import psycopg2.extras
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, EmailStr
 
-from cloud import config
 from cloud.auth.superadmin import require_platform_admin
 from cloud.auth.tokens import sha256_hex
 from cloud.db import service_conn

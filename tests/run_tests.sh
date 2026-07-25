@@ -2,7 +2,8 @@
 set -euo pipefail
 
 DB_URL="${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/traxia}"
-TESTS_DIR="$(cd "$(dirname "$0")/isolation" && pwd)"
+ISOLATION_DIR="$(cd "$(dirname "$0")/isolation" && pwd)"
+BACKOFFICE_DIR="$(cd "$(dirname "$0")/backoffice" && pwd)"
 FAILURES=0
 PASSED=0
 
@@ -34,16 +35,25 @@ psql "$DB_URL" -v ON_ERROR_STOP=1 -c "CREATE EXTENSION IF NOT EXISTS pgtap;" -q
 echo "  pgtap ready."
 
 echo ""
-echo "=== Loading seed data ==="
-psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$TESTS_DIR/00_seed.sql" -q
-echo "  seed loaded."
+echo "=== Loading isolation seed data ==="
+psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$ISOLATION_DIR/00_seed.sql" -q
+echo "  isolation seed loaded."
 
 echo ""
 echo "=== Running isolation tests (Section 8.4) ==="
-run_test "$TESTS_DIR/01_tenant_isolation.sql"
-run_test "$TESTS_DIR/02_site_scoped_isolation.sql"
-run_test "$TESTS_DIR/03_partner_isolation.sql"
-run_test "$TESTS_DIR/04_tenant_keeps_visibility_of_ceded_zones.sql"
+run_test "$ISOLATION_DIR/01_tenant_isolation.sql"
+run_test "$ISOLATION_DIR/02_site_scoped_isolation.sql"
+run_test "$ISOLATION_DIR/03_partner_isolation.sql"
+run_test "$ISOLATION_DIR/04_tenant_keeps_visibility_of_ceded_zones.sql"
+
+echo ""
+echo "=== Loading backoffice seed data ==="
+psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$BACKOFFICE_DIR/00_seed.sql" -q
+echo "  backoffice seed loaded."
+
+echo ""
+echo "=== Running backoffice RLS tests (Fase 2 / migration 0010) ==="
+run_test "$BACKOFFICE_DIR/01_rls_backoffice.sql"
 
 echo ""
 echo "Results: ${PASSED} passed, ${FAILURES} failed"

@@ -25,7 +25,7 @@
 
 BEGIN;
 
-SELECT plan(13);
+SELECT plan(15);
 
 -- ── UUIDs for this test (fixed so cross-references are unambiguous) ───────────
 -- Seeded by 00_backoffice_seed.sql:
@@ -218,6 +218,56 @@ SELECT lives_ok(
     AND site_id = 'bb100000-0000-4000-8000-000000000002'
   $$,
   'Admin can DELETE user_site_assignment'
+);
+
+-- (14) Admin A cannot INSERT user_site_assignment where user belongs to Tenant B → 42501.
+--      Regression guard for migration 0010: before the fix, usa_write only checked that
+--      site_id belonged to the caller's tenant — it never verified that user_id also
+--      belonged to the same tenant.  A tenant admin who knows a foreign user's UUID
+--      could assign them to their own site, potentially granting cross-tenant data access.
+SET LOCAL app.current_tenant_id  = 'bb100000-0000-4000-8000-000000000001';
+SET LOCAL app.current_actor_role = 'admin';
+SET LOCAL app.current_user_id    = 'bb100000-0000-4000-8000-000000000010';
+SET LOCAL app.current_partner_id = '';
+
+SELECT throws_ok(
+  $$
+  INSERT INTO user_site_assignments (user_id, site_id)
+  VALUES ('bb200000-0000-4000-8000-000000000010',   -- user from Tenant Beta
+          'bb100000-0000-4000-8000-000000000002')   -- site from Tenant Alpha
+  $$,
+  '42501',
+  'new row violates row-level security policy for table "user_site_assignments"',
+  'Admin A cannot INSERT cross-tenant user_id into own site (usa_write user tenant check, migration 0010)'
+);
+
+-- (15) Admin A DELETE of a cross-tenant user_id assignment is silently blocked (0 rows).
+--      A phantom row is first inserted as superuser (BYPASSRLS) so the row genuinely
+--      exists in the table — without it, DELETE returning 0 rows would be trivially true.
+--      After migration 0010, usa_delete USING requires user.tenant_id = current_tenant_id,
+--      so the row survives the DELETE attempt.
+RESET ROLE;
+INSERT INTO user_site_assignments (user_id, site_id)
+VALUES ('bb200000-0000-4000-8000-000000000010',
+        'bb100000-0000-4000-8000-000000000002');
+
+SET LOCAL ROLE traxia_app;
+SET LOCAL app.current_tenant_id  = 'bb100000-0000-4000-8000-000000000001';
+SET LOCAL app.current_actor_role = 'admin';
+SET LOCAL app.current_user_id    = 'bb100000-0000-4000-8000-000000000010';
+SET LOCAL app.current_partner_id = '';
+
+DELETE FROM user_site_assignments
+ WHERE user_id = 'bb200000-0000-4000-8000-000000000010'
+   AND site_id = 'bb100000-0000-4000-8000-000000000002';
+
+SELECT is(
+  (SELECT count(*)::integer
+     FROM user_site_assignments
+    WHERE user_id = 'bb200000-0000-4000-8000-000000000010'
+      AND site_id = 'bb100000-0000-4000-8000-000000000002'),
+  1,
+  'Admin A DELETE cross-tenant user_id silently blocked — phantom row survives (usa_delete user tenant check, migration 0010)'
 );
 
 SELECT * FROM finish();

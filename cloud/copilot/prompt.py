@@ -63,7 +63,7 @@ def build_system_prompt(ctx: Dict[str, Any]) -> str:
     zones = ctx.get("authorized_zones", [])
     if zones:
         zone_lines = "\n".join(
-            f"  - {z['zone_name'] if 'zone_name' in z else z['name']} "
+            f"  - {z['name']} "
             f"(id={z['id']}, type={z['zone_type']}, site={z.get('site_name', '?')})"
             for z in zones
         )

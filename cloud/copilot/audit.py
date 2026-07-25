@@ -36,13 +36,20 @@ DWELL_DROP_THRESHOLD = 0.5
 # Minimum baseline sessions to consider the drop meaningful (avoid noise on new zones)
 MIN_BASELINE_SESSIONS = 5
 
-# 64×64 gray JPEG — placeholder snapshot when no real camera frame is available.
-# Claude Vision rejects 1×1 images with 400; we need a processable image.
-# Loaded from file at import time to avoid base64 line-split corruption.
 import pathlib as _pathlib
-_PLACEHOLDER_JPEG_B64: str = __import__("base64").b64encode(
-    (_pathlib.Path(__file__).parent / "_snapshot_placeholder.jpg").read_bytes()
-).decode()
+# Loaded lazily on first use — loading at import time causes a module-level
+# ImportError if the file is missing, which would kill the entire API process
+# rather than just the audit function.
+_PLACEHOLDER_JPEG_B64: Optional[str] = None
+
+
+def _get_placeholder_b64() -> str:
+    global _PLACEHOLDER_JPEG_B64
+    if _PLACEHOLDER_JPEG_B64 is None:
+        _PLACEHOLDER_JPEG_B64 = base64.b64encode(
+            (_pathlib.Path(__file__).parent / "_snapshot_placeholder.jpg").read_bytes()
+        ).decode()
+    return _PLACEHOLDER_JPEG_B64
 
 
 def _find_dwell_drops() -> List[Dict[str, Any]]:
@@ -106,7 +113,7 @@ def _fetch_snapshot(zone_id: str) -> Optional[str]:
         return None
     # Production: look up snapshot URL from object storage, fetch bytes
     # For MLP: use placeholder
-    return _PLACEHOLDER_JPEG_B64
+    return _get_placeholder_b64()
 
 
 def _upload_snapshot_to_r2(zone_id: str, run_id: str, snapshot_b64: str) -> Optional[str]:

@@ -533,6 +533,14 @@ END $$;
 GRANT USAGE ON SCHEMA public TO traxia_service;
 GRANT SELECT, INSERT, UPDATE ON model_registry_entries, edge_gateways TO traxia_service;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO traxia_service;
+
+-- Allow the connection owner (postgres / pooler user) to SET ROLE to our
+-- application roles. Required on managed Postgres (Supabase) where postgres
+-- is not a superuser and cannot SET ROLE without explicit membership.
+DO $$ BEGIN
+  EXECUTE format('GRANT traxia_app TO %I', current_user);
+  EXECUTE format('GRANT traxia_service TO %I', current_user);
+END $$;
 """)
 
     # ── pg_partman: monthly partitions, 13-month retention (Section 8.6) ─────

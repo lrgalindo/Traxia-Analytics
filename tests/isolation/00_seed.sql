@@ -13,16 +13,16 @@ INSERT INTO tenants (id, reseller_id, name, vertical_type, status) VALUES
 ON CONFLICT DO NOTHING;
 
 INSERT INTO sites (id, tenant_id, name, status) VALUES
-  ('00000000-0000-4000-8000-0000000000b1', '00000000-0000-4000-8000-0000000000a1', 'La Torre Zona 10',     'active'),
-  ('00000000-0000-4000-8000-0000000000b2', '00000000-0000-4000-8000-0000000000a1', 'La Torre Zona 4',      'active'),
+  ('00000000-0000-4000-8000-0000000000b1', '00000000-0000-4000-8000-0000000000a1', 'La Torre Zona 10',      'active'),
+  ('00000000-0000-4000-8000-0000000000b2', '00000000-0000-4000-8000-0000000000a1', 'La Torre Zona 4',       'active'),
   ('00000000-0000-4000-8000-0000000000b3', '00000000-0000-4000-8000-0000000000a2', 'Sucursal Banco Centro', 'active')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO partners (id, tenant_id, name, status) VALUES
   ('00000000-0000-4000-8000-0000000000d1',
-   '00000000-0000-4000-8000-0000000000a1', 'Nestlé Demo',     'active'),
+   '00000000-0000-4000-8000-0000000000a1', 'Nestlé Demo',    'active'),
   ('00000000-0000-4000-8000-0000000000d2',
-   '00000000-0000-4000-8000-0000000000a1', 'Coca-Cola Demo',  'active')
+   '00000000-0000-4000-8000-0000000000a1', 'Coca-Cola Demo', 'active')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO users (id, tenant_id, email, role, status) VALUES
@@ -72,7 +72,7 @@ VALUES (
   'Góndola Nestlé Z10', 'shelf', '[[100,0],[200,0],[200,100],[100,100]]'
 ) ON CONFLICT DO NOTHING;
 
--- PARTNER-owned zone for d2 (same camera f101) — needed for partner↔partner isolation test
+-- PARTNER-owned zone for d2 (same camera f101) — needed for partner-partner isolation test
 INSERT INTO zones (id, camera_id, owner_type, owner_partner_id, name, zone_type, coordinates)
 VALUES (
   '00000000-0000-4000-8000-00000000e103',
@@ -97,7 +97,7 @@ VALUES (
   'p002', '2026-07-20 09:00:00+00', 60
 ) ON CONFLICT DO NOTHING;
 
--- Dwell session for d2's zone — d1 must NOT see this (partner↔partner isolation)
+-- Dwell session for d2's zone — d1 must NOT see this (partner-partner isolation)
 INSERT INTO zone_dwell_sessions (id, zone_id, person_id, entered_at, dwell_seconds)
 VALUES (
   '00000000-0000-4000-8000-00000000ee03',

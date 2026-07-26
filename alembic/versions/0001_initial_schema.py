@@ -20,25 +20,27 @@ def upgrade() -> None:
     op.execute("CREATE SCHEMA IF NOT EXISTS partman;")
     op.execute("CREATE EXTENSION IF NOT EXISTS pg_partman SCHEMA partman;")
 
-    # ── Session-GUC helpers (LEAKPROOF — superuser required; fine in Docker) ─
+    # ── Session-GUC helpers ───────────────────────────────────────────────────
+    # LEAKPROOF removed: requires superuser on managed Postgres (Supabase).
+    # These functions only read GUCs via current_setting() — no side-channel risk.
     op.execute("""
 CREATE OR REPLACE FUNCTION app_current_tenant_id() RETURNS UUID
-LANGUAGE sql STABLE LEAKPROOF PARALLEL SAFE AS $$
+LANGUAGE sql STABLE PARALLEL SAFE AS $$
   SELECT NULLIF(current_setting('app.current_tenant_id', true), '')::UUID
 $$;
 
 CREATE OR REPLACE FUNCTION app_current_partner_id() RETURNS UUID
-LANGUAGE sql STABLE LEAKPROOF PARALLEL SAFE AS $$
+LANGUAGE sql STABLE PARALLEL SAFE AS $$
   SELECT NULLIF(current_setting('app.current_partner_id', true), '')::UUID
 $$;
 
 CREATE OR REPLACE FUNCTION app_current_role() RETURNS TEXT
-LANGUAGE sql STABLE LEAKPROOF PARALLEL SAFE AS $$
+LANGUAGE sql STABLE PARALLEL SAFE AS $$
   SELECT NULLIF(current_setting('app.current_actor_role', true), '')
 $$;
 
 CREATE OR REPLACE FUNCTION app_current_site_ids() RETURNS UUID[]
-LANGUAGE sql STABLE LEAKPROOF PARALLEL SAFE AS $$
+LANGUAGE sql STABLE PARALLEL SAFE AS $$
   SELECT CASE
     WHEN NULLIF(current_setting('app.current_user_site_ids', true), '') IS NULL
     THEN ARRAY[]::UUID[]
@@ -47,27 +49,27 @@ LANGUAGE sql STABLE LEAKPROOF PARALLEL SAFE AS $$
 $$;
 
 CREATE OR REPLACE FUNCTION app_current_reseller_id() RETURNS UUID
-LANGUAGE sql STABLE LEAKPROOF PARALLEL SAFE AS $$
+LANGUAGE sql STABLE PARALLEL SAFE AS $$
   SELECT NULLIF(current_setting('app.current_reseller_id', true), '')::UUID
 $$;
 
 CREATE OR REPLACE FUNCTION app_current_user_id() RETURNS UUID
-LANGUAGE sql STABLE LEAKPROOF PARALLEL SAFE AS $$
+LANGUAGE sql STABLE PARALLEL SAFE AS $$
   SELECT NULLIF(current_setting('app.current_user_id', true), '')::UUID
 $$;
 
 CREATE OR REPLACE FUNCTION app_provision_tenant_id() RETURNS UUID
-LANGUAGE sql STABLE LEAKPROOF PARALLEL SAFE AS $$
+LANGUAGE sql STABLE PARALLEL SAFE AS $$
   SELECT NULLIF(current_setting('app.provision_tenant_id', true), '')::UUID
 $$;
 
 CREATE OR REPLACE FUNCTION app_current_ingest_site_id() RETURNS UUID
-LANGUAGE sql STABLE LEAKPROOF PARALLEL SAFE AS $$
+LANGUAGE sql STABLE PARALLEL SAFE AS $$
   SELECT NULLIF(current_setting('app.current_ingest_site_id', true), '')::UUID
 $$;
 
 CREATE OR REPLACE FUNCTION app_motor_site_id() RETURNS UUID
-LANGUAGE sql STABLE LEAKPROOF PARALLEL SAFE AS $$
+LANGUAGE sql STABLE PARALLEL SAFE AS $$
   SELECT NULLIF(current_setting('app.motor_site_id', true), '')::UUID
 $$;
 """)

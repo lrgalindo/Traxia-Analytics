@@ -1,11 +1,20 @@
-# Rescue Commit Audit — Open Findings
+# Rescue Commit Audit — Findings (CLOSED — Merged to master 2026-07-25)
 
 Branch audited: `claude/recover-untracked-source` (rescue commit `cfee689`)
 Audit date: 2026-07-24/25
 Scope: all modules in `edge/` and `cloud/` (14 files, 4 test suites)
 
+**All findings resolved. Both branches merged to `master` on 2026-07-25.**
+
+Post-merge suite against master (commits `4204ae7` + `a76a9f7`):
+```
+pgTAP  : 14/14  (isolation ×4, backoffice ×2, gateway ×7, lifecycle ×1)
+pytest : 32/32  (superadmin ×5, breakglass ×5, lifecycle ×10, grace-window ×1, channels ×6, crypto ×5)
+alembic: 0001 → 0011 clean (head)
+```
+
 Findings are ordered by the priority established at the close of the audit session.
-"Lote de cierre" = the batch of fixes to land before this branch can merge.
+"Lote de cierre" = the batch of fixes that landed in commit `a98e740` before merge.
 
 ---
 

@@ -4,15 +4,21 @@
 > salta a la sección [System Design Document (SDD) v3.4 — FINAL](#system-design-document-sdd-v34--final)
 > más abajo.**
 
-## Estado del Proyecto — 2026-07-21
+## Estado del Proyecto — 2026-07-25
 
-### Fases completadas
+### Fases completadas y mergeadas a master
 
 | Fase | Descripción | Estado |
 |------|-------------|--------|
-| **Fase 1** | Esquema PostgreSQL 17 + RLS 3 niveles + Edge Gateway + auth (access/refresh token) | ✅ Completa |
-| **Fase 2** | Backoffice, Partners, dashboards de tráfico/dwell/comparativo | ✅ Completa |
-| **Fase 3** | Motor de Acciones + Copiloto (Claude) + Hallazgos con snapshot firmado | ✅ Completa |
+| **Fase 1** | Esquema PostgreSQL 17 + RLS 3 niveles + Edge Gateway + auth (access/refresh/grace-window) | ✅ Mergeada |
+| **Fase 2** | Backoffice, Partners, dashboards de tráfico/dwell/comparativo | ✅ Mergeada |
+| **Fase 3** | Motor de Acciones + Copiloto (Claude) + Hallazgos con snapshot firmado R2 | ✅ Mergeada |
+| **Fase A** | SuperAdmin login (bcrypt) + Break-glass audit + GDPR right-to-erasure + RTSP Fernet | ✅ Mergeada |
+
+**Suite de tests — estado al merge:**
+- 14 pgTAP (isolation × 4, backoffice × 2, gateway × 7, lifecycle × 1): **14/14 ✅**
+- 32 pytest (superadmin login × 5, breakglass × 5, lifecycle × 10, grace-window × 1, channels × 6, crypto × 5): **32/32 ✅**
+- Migraciones 0001 → 0011 aplicadas en orden limpio con `alembic upgrade head`
 
 ### Qué tiene interfaz visual y qué es solo API
 
@@ -29,17 +35,33 @@
 | Hallazgos de auditoría (`agent_findings`) | ✅ | ✅ | Admin + Partner (RLS); snapshot como URL firmada R2 (5 min) |
 | Exportar PDF/CSV | ✅ | ✅ | |
 | Model Registry / Fleet Management | ❌ UI | ✅ API | Gestión interna vía SuperAdmin, sin UI todavía |
-| Login SuperAdmin | ❌ | ✅ | Ver brecha conocida abajo |
+| Login SuperAdmin | ❌ UI | ✅ API | `POST /v1/superadmin/login` — bcrypt + JWT separado (PLATFORM_ADMIN_SECRET) |
+| Break-glass access | ❌ UI | ✅ API | Audit log antes de acceso; sesión 4 h; solo SELECT en tracking_coordinates |
+| GDPR right-to-erasure | ❌ UI | ✅ API | `DELETE /v1/tenants/{id}/partners/{pid}/data` — irreversible, 2 capas de validación |
 | Reseller / Canal distribuidor | ❌ | ❌ activo | Diferido a v2.0 (tabla y RLS escritos, inertes) |
+
+### Variables de entorno requeridas (fail-fast — el servidor no arranca si faltan)
+
+```
+DATABASE_URL           — conexión PostgreSQL
+JWT_SECRET             — firma tokens de usuario/gateway
+RTSP_ENCRYPTION_KEY    — Fernet key para credenciales RTSP (32 bytes, base64)
+PLATFORM_ADMIN_SECRET  — firma tokens SuperAdmin (secreto separado de JWT_SECRET)
+```
+
+Opcionales (degradan gracefully si no están):
+```
+ANTHROPIC_API_KEY      — Copiloto y auditoría (sin ella: 503 en esos endpoints)
+R2_ACCOUNT_ID + R2_ACCESS_KEY_ID + R2_SECRET_ACCESS_KEY  — snapshots (sin ellas: sin snapshot_url)
+SUPABASE_URL + SUPABASE_ANON_KEY + SUPABASE_SERVICE_ROLE_KEY — MFA relay
+```
 
 ### Brechas conocidas documentadas en el SDD
 
-1. **Login de SuperAdmin** (SDD §4, §8.5): el SuperAdmin no es un usuario de la tabla
-   `users` — es acceso interno de la plataforma. No existe pantalla de login para el
-   SuperAdmin en el dashboard React. En el MLP, las operaciones del SuperAdmin
-   (crear tenants, asignar `vertical_type`, publicar modelos) se ejecutan directamente
-   sobre la base de datos o vía endpoints internos. Una UI de SuperAdmin está diseñada
-   pero no construida.
+1. **UI de SuperAdmin** (SDD §4, §8.5): el login de SuperAdmin existe como API
+   (`POST /v1/superadmin/login`). No hay pantalla de UI para SuperAdmin — todas las
+   operaciones de plataforma se ejecutan vía API directa. Una UI de SuperAdmin está
+   diseñada pero no construida.
 
 2. **Guardrail de salida del Copiloto** (SDD §12.4): la seguridad del Copiloto
    descansa en el aislamiento de datos (RLS filtra qué zonas se incluyen en el system
@@ -51,6 +73,10 @@
 3. **Reseller / Canal** (SDD §3.1, decisión 2): la tabla `resellers`, su RLS y el
    Flujo 6 están completos y validados en el SDD, pero **inertes** en el MLP. Se
    activan sin rediseño cuando exista el primer acuerdo de canal real.
+
+4. **Bootstrap site name** (F-9): `approve_tenant()` crea el primer sitio con nombre
+   hardcodeado `'Sucursal Principal'`. Sin impacto de seguridad; se extiende en
+   producción cuando el onboarding flow reciba el nombre del Asset Owner.
 
 ---
 
@@ -66,23 +92,24 @@
 ### 1. Base de datos
 
 ```bash
-# Crea la base de datos y ejecuta el DDL + extensiones (ver SDD §8)
-psql -U postgres -c "CREATE DATABASE traxia_dev;"
-psql -U postgres -d traxia_dev -f db/schema.sql
-# Las extensiones requeridas: pgcrypto, citext, pg_partman
+# Crea la base de datos
+createdb traxia
+
+# Aplica las 11 migraciones en orden (incluye schema completo + RLS + extensiones)
+DATABASE_URL=postgresql://$USER@localhost:5432/traxia alembic upgrade head
 ```
 
 ### 2. API Cloud
 
 ```bash
-cd cloud
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
-# Variables de entorno requeridas (sin defaults en el código):
-export DATABASE_URL="postgresql://traxia_app:password@localhost/traxia_dev"
-export JWT_SECRET="your-secret-here"          # ValueError si no está seteado
-export ANTHROPIC_API_KEY="sk-ant-..."         # Opcional; sin ella el Copiloto devuelve 503
+# Variables requeridas (el servidor falla con ValueError si faltan):
+export DATABASE_URL="postgresql://localhost/traxia"
+export JWT_SECRET="$(openssl rand -hex 32)"
+export RTSP_ENCRYPTION_KEY="$(python3 -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())')"
+export PLATFORM_ADMIN_SECRET="$(openssl rand -hex 32)"
 
 uvicorn cloud.main:app --reload --port 8000
 ```

@@ -22,6 +22,7 @@ import os
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel
 
+from cloud import config
 from cloud.auth.deps import require_gateway_token
 
 router = APIRouter(prefix="/v1/models")

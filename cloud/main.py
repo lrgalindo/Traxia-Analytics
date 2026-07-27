@@ -47,14 +47,18 @@ app.include_router(telemetry_router)
 
 @app.get("/health")
 def health() -> JSONResponse:
+    import logging
     import os
     import psycopg2
+    _log = logging.getLogger(__name__)
     db_url = os.environ.get("DATABASE_URL", "")
     if not db_url:
-        return JSONResponse(status_code=503, content={"status": "error", "detail": "DATABASE_URL not set"})
+        _log.error("health check: DATABASE_URL not set")
+        return JSONResponse(status_code=503, content={"status": "error"})
     try:
         conn = psycopg2.connect(db_url, connect_timeout=5)
         conn.close()
         return JSONResponse(status_code=200, content={"status": "ok"})
-    except Exception as exc:
-        return JSONResponse(status_code=503, content={"status": "error", "detail": str(exc)})
+    except Exception:
+        _log.exception("health check: database connection failed")
+        return JSONResponse(status_code=503, content={"status": "error"})

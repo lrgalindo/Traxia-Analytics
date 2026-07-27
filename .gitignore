@@ -15,3 +15,8 @@ dashboard-tmp/
 # keypairs); regenerate locally, do not version.
 *.key
 *.crt
+
+# Secrets — environment files with real credentials. Never commit.
+secrets/
+.env.production.local
+.env.local

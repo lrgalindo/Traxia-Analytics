@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 
 from cloud.actions.router import router as actions_router
 from cloud.actions.scheduler import start_action_engine_scheduler
@@ -45,5 +46,15 @@ app.include_router(telemetry_router)
 
 
 @app.get("/health")
-def health() -> dict:
-    return {"status": "ok"}
+def health() -> JSONResponse:
+    import os
+    import psycopg2
+    db_url = os.environ.get("DATABASE_URL", "")
+    if not db_url:
+        return JSONResponse(status_code=503, content={"status": "error", "detail": "DATABASE_URL not set"})
+    try:
+        conn = psycopg2.connect(db_url, connect_timeout=5)
+        conn.close()
+        return JSONResponse(status_code=200, content={"status": "ok"})
+    except Exception as exc:
+        return JSONResponse(status_code=503, content={"status": "error", "detail": str(exc)})

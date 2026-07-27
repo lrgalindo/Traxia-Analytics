@@ -4,7 +4,27 @@
 > salta a la sección [System Design Document (SDD) v3.4 — FINAL](#system-design-document-sdd-v34--final)
 > más abajo.**
 
-## Estado del Proyecto — 2026-07-25
+## Estado del Proyecto — 2026-07-27
+
+### Deploy en producción
+
+| Servicio | URL | Estado |
+|---------|-----|--------|
+| **Cloud API (Render)** | https://traxia-analytics.onrender.com | ✅ Live |
+| **Base de datos (Supabase)** | Proyecto `rvyftmriofvddtlpizlw`, us-east-1 | ✅ Conectada |
+| **Snapshots (R2)** | — | ⚠️ No configurado — endpoints de snapshot retornan 503 descriptivo |
+| **Auth de usuarios (Supabase Auth)** | — | ⚠️ No configurado — login de Tenant Admin / Operator / Partner bloqueado hasta configurar `SUPABASE_URL` + `SUPABASE_ANON_KEY` en Render |
+
+**Endpoints validados contra infraestructura real (smoke test 2026-07-27):**
+- `GET /health` → 200
+- `POST /v1/superadmin/login` → 200
+- `POST /v1/tenants/register` → 201
+- `POST /v1/superadmin/tenants/{id}/approve` → 200
+- `POST /v1/edge/token/activate` → 200
+- `POST /v1/edge/token/refresh` → 200
+- `GET /v1/models/retail/manifest` → 503 descriptivo (R2 no configurado — comportamiento esperado)
+
+**Próximo paso de infraestructura:** Configurar `SUPABASE_URL`, `SUPABASE_ANON_KEY` y `SUPABASE_SERVICE_ROLE_KEY` en Render para habilitar el login de usuarios del lado cliente.
 
 ### Fases completadas y mergeadas a master
 
@@ -18,7 +38,7 @@
 **Suite de tests — estado al merge:**
 - 14 pgTAP (isolation × 4, backoffice × 2, gateway × 7, lifecycle × 1): **14/14 ✅**
 - 32 pytest (superadmin login × 5, breakglass × 5, lifecycle × 10, grace-window × 1, channels × 6, crypto × 5): **32/32 ✅**
-- Migraciones 0001 → 0011 aplicadas en orden limpio con `alembic upgrade head`
+- Migraciones 0001 → 0014 aplicadas en Supabase us-east-1 (`alembic upgrade head` + parches directos para compatibilidad con RLS gestionado)
 
 ### Qué tiene interfaz visual y qué es solo API
 
@@ -49,12 +69,16 @@ RTSP_ENCRYPTION_KEY    — Fernet key para credenciales RTSP (32 bytes, base64)
 PLATFORM_ADMIN_SECRET  — firma tokens SuperAdmin (secreto separado de JWT_SECRET)
 ```
 
-Opcionales (degradan gracefully si no están):
+Opcionales (degradan gracefully si no están, con excepciones indicadas):
 ```
 ANTHROPIC_API_KEY      — Copiloto y auditoría (sin ella: 503 en esos endpoints)
-R2_ACCOUNT_ID + R2_ACCESS_KEY_ID + R2_SECRET_ACCESS_KEY  — snapshots (sin ellas: sin snapshot_url)
-SUPABASE_URL + SUPABASE_ANON_KEY + SUPABASE_SERVICE_ROLE_KEY — MFA relay
+R2_ACCOUNT_ID + R2_ACCESS_KEY_ID + R2_SECRET_ACCESS_KEY  — snapshots (sin ellas: 503 en manifest/snapshot)
+SUPABASE_URL + SUPABASE_ANON_KEY + SUPABASE_SERVICE_ROLE_KEY — login de usuarios
 ```
+> ⚠️ **`SUPABASE_URL` + `SUPABASE_ANON_KEY` no son meramente opcionales en producción.**
+> Sin ellas, `POST /v1/auth/login` retorna 503 — ningún usuario del lado cliente
+> (Tenant Admin, Operator, Partner) puede autenticarse. SuperAdmin y Edge Gateway
+> no se ven afectados (usan JWT propio). Configurar antes del primer demo a cliente.
 
 ### Brechas conocidas documentadas en el SDD
 

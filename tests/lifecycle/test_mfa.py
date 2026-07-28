@@ -84,23 +84,44 @@ def test_login_mfa_required_returns_401():
 
 
 def test_login_success_without_mfa():
-    """When Supabase returns a session (no MFA needed), relay it to client."""
+    """Supabase validates password; we issue our own JWT with tenant context."""
+    import jwt as pyjwt
     session = {
         "access_token": "sb-access-token",
         "refresh_token": "sb-refresh-token",
-        "user": {"id": "user-id", "email": "user@test.com"},
+        "user": {"id": "sb-user-id", "email": "user@test.com"},
     }
     supabase_resp = _make_response(200, session)
 
+    mock_user_row = {
+        "id": "00000000-0000-0000-0000-000000000001",
+        "tenant_id": "00000000-0000-0000-0000-000000000002",
+        "role": "admin",
+        "partner_id": None,
+        "site_ids": None,
+    }
+
     with patch("cloud.auth.mfa.config") as mock_cfg, \
-         patch("cloud.auth.mfa.httpx.Client") as mock_client_cls:
+         patch("cloud.auth.mfa.httpx.Client") as mock_client_cls, \
+         patch("cloud.auth.mfa.service_conn") as mock_conn:
         mock_cfg.SUPABASE_URL = "https://mock.supabase.co"
         mock_cfg.SUPABASE_ANON_KEY = "mock-anon-key"
+        mock_cfg.JWT_SECRET = "test-secret"
+        mock_cfg.JWT_ALGORITHM = "HS256"
+        mock_cfg.ACCESS_TOKEN_TTL_HOURS = 24
+
         mock_instance = MagicMock()
         mock_instance.__enter__ = MagicMock(return_value=mock_instance)
         mock_instance.__exit__ = MagicMock(return_value=False)
         mock_instance.post.return_value = supabase_resp
         mock_client_cls.return_value = mock_instance
+
+        mock_cur = MagicMock()
+        mock_cur.fetchone.return_value = mock_user_row
+        mock_ctx = MagicMock()
+        mock_ctx.__enter__ = MagicMock(return_value=mock_cur)
+        mock_ctx.__exit__ = MagicMock(return_value=False)
+        mock_conn.return_value = mock_ctx
 
         resp = client.post(
             "/v1/auth/login",
@@ -109,7 +130,11 @@ def test_login_success_without_mfa():
 
     assert resp.status_code == 200
     body = resp.json()
-    assert body.get("access_token") == "sb-access-token"
+    # We issue our JWT, not Supabase's
+    assert "access_token" in body
+    assert body.get("token_type") == "bearer"
+    # The Supabase token must NOT be returned
+    assert body.get("access_token") != "sb-access-token"
 
 
 def test_login_wrong_password_propagates_error():

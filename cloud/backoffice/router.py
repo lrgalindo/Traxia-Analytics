@@ -8,19 +8,20 @@ Endpoints:
   POST /v1/backoffice/users               — create user + assign to sites
   GET  /v1/backoffice/users               — list tenant users
   DELETE /v1/backoffice/users/{id}/sites/{site_id} — remove site assignment
-  POST /v1/backoffice/partners            — one-step partner creation + invite
+  POST /v1/backoffice/partners            — one-step partner creation + admin account
   POST /v1/backoffice/partners/{id}/revoke — manual partner revocation
 """
 
 import logging
 from typing import List, Optional
-from uuid import UUID
 
+import httpx
+import psycopg2
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, EmailStr
 
+from cloud import config
 from cloud.auth.deps import require_tenant_admin
-from cloud.auth.tokens import make_user_token, new_opaque_token
 from cloud.backoffice.scheduler import revoke_partner
 from cloud.db import user_conn
 
@@ -28,15 +29,106 @@ log = logging.getLogger(__name__)
 router = APIRouter(prefix="/v1/backoffice")
 
 
+def _create_supabase_auth_user(email: str, password: str) -> None:
+    """Create a confirmed user in Supabase Auth via the Admin API.
+
+    Uses SUPABASE_SERVICE_ROLE_KEY (server-side only). email_confirm=True so
+    the account is immediately active without an email round-trip.
+
+    If Supabase is not configured, logs a warning and returns without error.
+    The user will not be able to log in until both env vars are set.
+    """
+    if not (config.SUPABASE_URL and config.SUPABASE_SERVICE_ROLE_KEY):
+        log.warning(
+            "Supabase not configured — skipping Auth account creation for %s. "
+            "User will not be able to log in until SUPABASE_URL and "
+            "SUPABASE_SERVICE_ROLE_KEY are set.",
+            email,
+        )
+        return
+
+    url = f"{config.SUPABASE_URL.rstrip('/')}/auth/v1/admin/users"
+    headers = {
+        "apikey": config.SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": f"Bearer {config.SUPABASE_SERVICE_ROLE_KEY}",
+        "Content-Type": "application/json",
+    }
+    with httpx.Client(timeout=10.0) as client:
+        resp = client.post(url, headers=headers, json={
+            "email": email,
+            "password": password,
+            "email_confirm": True,
+        })
+
+    if resp.status_code == 422:
+        log.info("Supabase Auth user already exists for %s", email)
+        return
+
+    if not resp.is_success:
+        log.error(
+            "Failed to create Supabase Auth user for %s: HTTP %s",
+            email, resp.status_code,
+        )
+        raise HTTPException(
+            status_code=502,
+            detail="supabase_auth_create_failed",
+        )
+
+
+def _compensate_delete_user(user_id: str) -> None:
+    """Delete an orphaned user row after a failed Supabase Auth call.
+
+    Uses a raw psycopg2 connection (session owner = postgres / BYPASSRLS) because
+    traxia_app and traxia_service have no DELETE policy on the users table.
+    user_site_assignments cascades automatically on delete.
+    """
+    try:
+        conn = psycopg2.connect(config.DATABASE_URL)
+        conn.autocommit = True
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM users WHERE id = %s", (user_id,))
+        conn.close()
+        log.info("Compensation: deleted orphaned user row %s", user_id)
+    except Exception as exc:
+        log.error(
+            "COMPENSATION FAILED — orphaned user row id=%s needs manual cleanup: %s",
+            user_id, exc,
+        )
+
+
+def _compensate_delete_partner(partner_id: str) -> None:
+    """Delete an orphaned partner row after a failed Supabase Auth call.
+
+    Runs as postgres / BYPASSRLS. Cascades to the partner admin user and zones.
+    """
+    try:
+        conn = psycopg2.connect(config.DATABASE_URL)
+        conn.autocommit = True
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM partners WHERE id = %s", (partner_id,))
+        conn.close()
+        log.info(
+            "Compensation: deleted orphaned partner row %s (cascades to user + zones)",
+            partner_id,
+        )
+    except Exception as exc:
+        log.error(
+            "COMPENSATION FAILED — orphaned partner row id=%s needs manual cleanup: %s",
+            partner_id, exc,
+        )
+
+
 # ── Request / Response models ──────────────────────────────────────────────────
 
 class CreateUserRequest(BaseModel):
     email: EmailStr
-    role: str          # 'operator' | 'viewer'
+    password: str        # initial password; Supabase Auth account is created immediately
+    role: str            # 'operator' | 'viewer'
     site_ids: List[str]  # UUIDs of sites to assign (≥1 for operator/viewer)
 
     model_config = {"json_schema_extra": {"example": {
         "email": "operator@tienda.com",
+        "password": "TempPass123!",
         "role": "operator",
         "site_ids": ["c3e20000-0000-0000-0000-000000000001"],
     }}}
@@ -47,7 +139,6 @@ class UserResponse(BaseModel):
     email: str
     role: str
     site_ids: List[str]
-    invite_token: str   # plaintext — caller sends this in the invitation email
 
 
 class UserListItem(BaseModel):
@@ -67,12 +158,14 @@ class ZoneSpec(BaseModel):
 class CreatePartnerRequest(BaseModel):
     name: str
     admin_email: EmailStr
-    access_expires_at: Optional[str] = None   # ISO-8601 or None for no expiry
+    admin_password: str                     # initial password for the Supabase Auth account
+    access_expires_at: Optional[str] = None  # ISO-8601 or None for no expiry
     zones: List[ZoneSpec] = []
 
     model_config = {"json_schema_extra": {"example": {
         "name": "Proveedor Lácteos SA",
         "admin_email": "admin@lacteos.com",
+        "admin_password": "TempPass123!",
         "access_expires_at": "2027-01-01T00:00:00Z",
         "zones": [{
             "camera_id": "d4e2e000-0000-0000-0000-000000000001",
@@ -87,7 +180,6 @@ class PartnerResponse(BaseModel):
     partner_id: str
     name: str
     admin_user_id: str
-    invite_token: str   # plaintext — caller sends this in the invitation email
     zones_created: int
 
 
@@ -98,41 +190,37 @@ def create_user(
     body: CreateUserRequest,
     token: dict = Depends(require_tenant_admin),
 ) -> UserResponse:
-    """Create an operator or viewer user and assign them to the given sites.
+    """Create an operator or viewer user, assign to sites, and provision Supabase Auth.
 
-    Admin users implicitly see all tenant sites (the sites_read RLS policy
-    handles this with no rows needed in user_site_assignments).  This endpoint
-    is for operator/viewer accounts that need explicit per-site access.
-
-    The invite_token in the response must be relayed to the user out-of-band
-    (email).  It expires in 72 hours.  Only its SHA-256 hash is stored in the DB.
+    Steps:
+    1. DB INSERT in its own transaction (commits when `with` exits).
+    2. Supabase Auth account created AFTER the transaction is closed — never inside it.
+    3. If Supabase fails: compensate by deleting the local row, then re-raise 502.
+       Note: if the process crashes between step 1 commit and step 2 completion,
+       the orphaned row is not cleaned up automatically. See docs/AUDIT_FINDINGS.md F-10.
     """
     if body.role not in ("operator", "viewer"):
         raise HTTPException(status_code=422, detail="role must be 'operator' or 'viewer'")
     if not body.site_ids:
         raise HTTPException(status_code=422, detail="at least one site_id is required")
 
-    invite_plain, invite_hash = new_opaque_token()
     tenant_id = token["tid"]
 
+    # Step 1: DB transaction — commits when this block exits.
     with user_conn(token) as cur:
-        # Insert user — users_write RLS ensures tenant scoping
         cur.execute(
             """
-            INSERT INTO users (tenant_id, email, role, status,
-                               invite_token_hash, invite_expires_at)
-            VALUES (%s, %s, %s, 'invited', %s, now() + interval '72 hours')
+            INSERT INTO users (tenant_id, email, role, status)
+            VALUES (%s, %s, %s, 'active')
             RETURNING id::text AS user_id
             """,
-            (tenant_id, body.email, body.role, invite_hash),
+            (tenant_id, body.email, body.role),
         )
         row = cur.fetchone()
         if row is None:
             raise HTTPException(status_code=409, detail="user already exists or RLS denied insert")
         user_id = row["user_id"]
 
-        # Verify each site belongs to this tenant and assign
-        # usa_write RLS: sec_tenant_owns_site(site_id, current_tenant_id) — no bypass needed
         assigned: List[str] = []
         for site_id in body.site_ids:
             try:
@@ -152,12 +240,19 @@ def create_user(
                     detail=f"site {site_id} not accessible in this tenant or RLS denied",
                 )
 
+    # Step 2: Supabase Auth — called after the transaction has committed.
+    # On failure: compensate by deleting the local row, then re-raise.
+    try:
+        _create_supabase_auth_user(body.email, body.password)
+    except HTTPException:
+        _compensate_delete_user(user_id)
+        raise
+
     return UserResponse(
         user_id=user_id,
         email=body.email,
         role=body.role,
         site_ids=assigned,
-        invite_token=invite_plain,
     )
 
 
@@ -208,30 +303,25 @@ def create_partner(
     body: CreatePartnerRequest,
     token: dict = Depends(require_tenant_admin),
 ) -> PartnerResponse:
-    """Create a partner, its admin user, and zones — all in one step.
+    """Create a partner, its admin user, and zones — then provision Supabase Auth.
 
-    Flow (atomic within a single transaction via user_conn):
-    1. INSERT partner → partners table (partners_write RLS enforces tenant scoping)
-    2. INSERT admin user for the partner (users_write RLS)
-    3. INSERT zones for each spec (zones_provision RLS: sec_tenant_owns_camera)
-    4. Generate invite token (only hash stored; plaintext returned to caller)
-
-    The invite_token must be sent to admin_email out-of-band.  For the MLP
-    this is returned in the response; in production it would be sent via email.
+    Flow:
+    1. DB transaction: partner + admin user (status='active') + zones — commits.
+    2. Supabase Auth account for admin_email — called after the transaction closes.
+    3. If Supabase fails: compensate by deleting the partner row (cascades to
+       admin user + zones). Re-raise 502.
+       Note: crash between step 1 commit and step 2 completion leaves orphaned rows.
+       See docs/AUDIT_FINDINGS.md F-10.
     """
-    invite_plain, invite_hash = new_opaque_token()
     tenant_id = token["tid"]
 
     with user_conn(token) as cur:
         # 1. Create partner
-        expires_sql = (
-            "(%s::timestamptz)" if body.access_expires_at else "NULL"
-        )
         if body.access_expires_at:
             cur.execute(
-                f"""
+                """
                 INSERT INTO partners (tenant_id, name, access_expires_at)
-                VALUES (%s, %s, {expires_sql})
+                VALUES (%s, %s, %s::timestamptz)
                 RETURNING id::text AS partner_id, name
                 """,
                 (tenant_id, body.name, body.access_expires_at),
@@ -250,23 +340,21 @@ def create_partner(
             raise HTTPException(status_code=403, detail="RLS denied partner creation")
         partner_id = partner_row["partner_id"]
 
-        # 2. Create partner admin user
+        # 2. Create partner admin user (status='active' — Supabase call follows)
         cur.execute(
             """
-            INSERT INTO users (tenant_id, partner_id, email, role, status,
-                               invite_token_hash, invite_expires_at)
-            VALUES (%s, %s, %s, 'admin', 'invited', %s, now() + interval '72 hours')
+            INSERT INTO users (tenant_id, partner_id, email, role, status)
+            VALUES (%s, %s, %s, 'admin', 'active')
             RETURNING id::text AS user_id
             """,
-            (tenant_id, partner_id, body.admin_email, invite_hash),
+            (tenant_id, partner_id, body.admin_email),
         )
         user_row = cur.fetchone()
         if user_row is None:
             raise HTTPException(status_code=409, detail="admin user could not be created")
         admin_user_id = user_row["user_id"]
 
-        # 3. Create zones (uses zones_provision policy: sec_tenant_owns_camera)
-        # We need to set app.provision_tenant_id for the zones_provision policy.
+        # 3. Create zones (zones_provision policy: sec_tenant_owns_camera)
         cur.execute("SET LOCAL app.provision_tenant_id = %s", (tenant_id,))
         zones_created = 0
         for z in body.zones:
@@ -287,6 +375,14 @@ def create_partner(
                     detail=f"zone creation denied for camera {z.camera_id}: {exc}",
                 )
 
+    # Step 2 of 2: Supabase Auth — after the transaction has committed.
+    # On failure: compensate by deleting the partner row (cascades to user + zones).
+    try:
+        _create_supabase_auth_user(body.admin_email, body.admin_password)
+    except HTTPException:
+        _compensate_delete_partner(partner_id)
+        raise
+
     log.info(
         "Partner created: id=%s name=%r admin=%s zones=%d tenant=%s",
         partner_id, body.name, body.admin_email, zones_created, tenant_id,
@@ -296,7 +392,6 @@ def create_partner(
         partner_id=partner_id,
         name=body.name,
         admin_user_id=admin_user_id,
-        invite_token=invite_plain,
         zones_created=zones_created,
     )
 

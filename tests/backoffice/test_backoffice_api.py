@@ -159,6 +159,7 @@ class TestCreateUser:
             "/v1/backoffice/users",
             json={
                 "email": "op-bt@test.com",
+                "password": "TempPass123!",
                 "role": "operator",
                 "site_ids": [seed["site_id"]],
             },
@@ -168,14 +169,13 @@ class TestCreateUser:
         body = resp.json()
         assert body["role"] == "operator"
         assert body["site_ids"] == [seed["site_id"]]
-        assert "invite_token" in body
-        assert len(body["invite_token"]) > 10
 
     def test_admin_creates_viewer(self, seed: dict) -> None:
         resp = client.post(
             "/v1/backoffice/users",
             json={
                 "email": "viewer-bt@test.com",
+                "password": "TempPass123!",
                 "role": "viewer",
                 "site_ids": [seed["site_id"]],
             },
@@ -212,8 +212,8 @@ class TestCreateUser:
         other_site = _new_id()  # random UUID that doesn't belong to this tenant
         resp = client.post(
             "/v1/backoffice/users",
-            json={"email": f"cross{_new_id()[:8]}@bt.com", "role": "viewer",
-                  "site_ids": [other_site]},
+            json={"email": f"cross{_new_id()[:8]}@bt.com", "password": "TempPass123!",
+                  "role": "viewer", "site_ids": [other_site]},
             headers=_admin_headers(seed),
         )
         assert resp.status_code == 403
@@ -226,6 +226,7 @@ class TestCreatePartner:
             json={
                 "name": "BT Partner SA",
                 "admin_email": "partner-admin@bt.com",
+                "admin_password": "TempPass123!",
                 "access_expires_at": "2030-01-01T00:00:00Z",
                 "zones": [{
                     "camera_id": seed["camera_id"],
@@ -239,7 +240,6 @@ class TestCreatePartner:
         assert resp.status_code == 201, resp.text
         body = resp.json()
         assert body["zones_created"] == 1
-        assert "invite_token" in body
         assert "partner_id" in body
 
     def test_staff_exclusion_zone_allowed(self, seed: dict) -> None:
@@ -248,6 +248,7 @@ class TestCreatePartner:
             json={
                 "name": "BT Partner Staff",
                 "admin_email": f"staff-{_new_id()[:6]}@bt.com",
+                "admin_password": "TempPass123!",
                 "zones": [{
                     "camera_id": seed["camera_id"],
                     "name": "Staff Lounge",
@@ -267,6 +268,7 @@ class TestCreatePartner:
             json={
                 "name": "Cross Tenant P",
                 "admin_email": f"ct{_new_id()[:6]}@bt.com",
+                "admin_password": "TempPass123!",
                 "zones": [{
                     "camera_id": other_camera,
                     "name": "Zone X",
@@ -287,6 +289,7 @@ class TestPartnerRevocation:
             json={
                 "name": "Revoke Partner",
                 "admin_email": f"rv{_new_id()[:6]}@bt.com",
+                "admin_password": "TempPass123!",
             },
             headers=_admin_headers(seed),
         )
@@ -373,7 +376,7 @@ class TestNegativeAccessControl:
     def test_partner_viewer_cannot_create_user(self) -> None:
         resp = client.post(
             "/v1/backoffice/users",
-            json={"email": "x@x.com", "role": "viewer",
+            json={"email": "x@x.com", "password": "TempPass123!", "role": "viewer",
                   "site_ids": [self._seed["site_id"]]},
             headers=self._pv_headers(),
         )
@@ -386,7 +389,7 @@ class TestNegativeAccessControl:
     def test_partner_viewer_cannot_create_partner(self) -> None:
         resp = client.post(
             "/v1/backoffice/partners",
-            json={"name": "Hack Partner", "admin_email": "h@h.com"},
+            json={"name": "Hack Partner", "admin_email": "h@h.com", "admin_password": "TempPass123!"},
             headers=self._pv_headers(),
         )
         assert resp.status_code == 403, f"Expected 403 got {resp.status_code}: {resp.text}"
@@ -403,7 +406,7 @@ class TestNegativeAccessControl:
         headers = _operator_headers(self._seed, op_id, [self._seed["site_id"]])
         resp = client.post(
             "/v1/backoffice/users",
-            json={"email": "x@x.com", "role": "viewer",
+            json={"email": "x@x.com", "password": "TempPass123!", "role": "viewer",
                   "site_ids": [self._seed["site_id"]]},
             headers=headers,
         )
@@ -414,7 +417,7 @@ class TestNegativeAccessControl:
         headers = _operator_headers(self._seed, op_id, [self._seed["site_id"]])
         resp = client.post(
             "/v1/backoffice/partners",
-            json={"name": "Hack", "admin_email": "op@h.com"},
+            json={"name": "Hack", "admin_email": "op@h.com", "admin_password": "TempPass123!"},
             headers=headers,
         )
         assert resp.status_code == 403, f"Expected 403 got {resp.status_code}: {resp.text}"
@@ -434,7 +437,8 @@ class TestNegativeAccessControl:
 
         resp_users = client.post(
             "/v1/backoffice/users",
-            json={"email": "x@x.com", "role": "viewer", "site_ids": [self._seed["site_id"]]},
+            json={"email": "x@x.com", "password": "TempPass123!", "role": "viewer",
+                  "site_ids": [self._seed["site_id"]]},
             headers=headers,
         )
         assert resp_users.status_code == 403, (
@@ -443,7 +447,7 @@ class TestNegativeAccessControl:
 
         resp_partners = client.post(
             "/v1/backoffice/partners",
-            json={"name": "Hack", "admin_email": "pa@h.com"},
+            json={"name": "Hack", "admin_email": "pa@h.com", "admin_password": "TempPass123!"},
             headers=headers,
         )
         assert resp_partners.status_code == 403, (

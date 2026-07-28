@@ -26,13 +26,15 @@ Test strategy (tests/lifecycle/test_mfa.py):
   - A successful MFA verification returns the session
 """
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import httpx
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, EmailStr
 
 from cloud import config
+from cloud.auth.tokens import make_user_token
+from cloud.db import service_conn
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/v1/auth", tags=["auth-mfa"])
@@ -88,11 +90,18 @@ def _supabase_url(path: str) -> str:
 
 @router.post("/login")
 def login(body: LoginRequest) -> Dict[str, Any]:
-    """Proxy email+password login to Supabase Auth.
+    """Validate email+password via Supabase Auth, then issue our own JWT.
 
-    If the user has MFA enrolled, Supabase returns an error with
-    error_code "mfa_required".  We surface this as HTTP 401 so the
-    client knows to redirect to the TOTP prompt.
+    Supabase handles password validation and MFA. On success we look up the
+    user in our users table and sign a JWT with our JWT_SECRET containing
+    the tenant context (tid, role, sids) that protected endpoints require.
+
+    Supabase's JWT is intentionally discarded after validation — clients
+    receive our JWT, which carries RLS context (tid/role/sids) that Supabase's
+    generic JWT cannot provide without a custom claims hook.
+
+    If MFA is enrolled Supabase returns mfa_required; we surface 401 so the
+    client can proceed with POST /v1/auth/mfa/verify.
     """
     headers = _supabase_headers()
     with httpx.Client() as client:
@@ -126,7 +135,35 @@ def login(body: LoginRequest) -> Dict[str, Any]:
             detail=data.get("message") or data.get("error_description") or "login_failed",
         )
 
-    return data
+    # Supabase validated the password. Exchange for our JWT that carries
+    # the tenant context protected endpoints need (tid, role, sids).
+    with service_conn() as cur:
+        cur.execute(
+            """
+            SELECT u.id::text, u.tenant_id::text, u.role, u.partner_id::text,
+                   array_agg(a.site_id::text) FILTER (WHERE a.site_id IS NOT NULL) AS site_ids
+            FROM users u
+            LEFT JOIN user_site_assignments a ON a.user_id = u.id
+            WHERE u.email = %s AND u.status = 'active'
+            GROUP BY u.id, u.tenant_id, u.role, u.partner_id
+            """,
+            (body.email,),
+        )
+        user_row = cur.fetchone()
+
+    if user_row is None:
+        log.warning("Supabase auth succeeded for %s but user not found or inactive in our DB", body.email)
+        raise HTTPException(status_code=403, detail="user_not_provisioned")
+
+    access_token = make_user_token(
+        user_id=user_row["id"],
+        tenant_id=user_row["tenant_id"],
+        role=user_row["role"],
+        partner_id=user_row["partner_id"],
+        site_ids=user_row["site_ids"] or None,
+    )
+
+    return {"access_token": access_token, "token_type": "bearer"}
 
 
 # ── (2) MFA second-factor verification ───────────────────────────────────────

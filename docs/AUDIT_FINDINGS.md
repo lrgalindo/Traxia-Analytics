@@ -231,6 +231,44 @@ themselves, not inherit a generic placeholder. Low cost to fix: add `site_name: 
 
 ---
 
+---
+
+## F-10: Orphaned rows on process crash between local commit and Supabase Auth call
+
+**Files:** `cloud/backoffice/router.py` — `create_user()`, `create_partner()`
+**Severity:** Low (data integrity; not security; requires a crash at a specific instant)
+**Status:** Open — deferred; fix requires saga/outbox pattern
+
+`create_user` and `create_partner` follow the compensation pattern:
+
+1. DB INSERT commits in its own transaction.
+2. Supabase Auth Admin API called outside that transaction.
+3. If Supabase responds with an error: local row is deleted (compensation).
+
+The gap: if the process is killed, crashes, or is restarted by Render **between step 1
+completing and step 2 returning** (network timeout without an exception reaching the
+`except` block, SIGKILL from deploy, OOM), the `try/except` never executes. The result
+is a `users` or `partners` row committed to the DB with `status='active'` but with no
+corresponding Supabase Auth account. The user cannot log in.
+
+**Why not fixed now:** resolving this correctly requires an outbox table or a saga
+coordinator (persist "Supabase call pending" before the external call; mark "done" after;
+a background job cleans up pending entries). That is over-engineering for the MLP.
+
+**Recommended future fix:** a periodic reconciliation job (cron or Render background
+worker, run every 15 minutes) that:
+1. Queries `users WHERE status = 'active' AND created_at < now() - interval '10 minutes'`
+   and cross-references against `GET /auth/v1/admin/users?email=...` in Supabase.
+2. For rows with no Supabase account: either re-attempts the Auth creation or marks
+   `status = 'sync_error'` for manual review.
+3. Same logic for `partners` rows (check the admin user's email).
+
+Until the reconciliation job exists, operators can detect orphaned rows manually by
+querying `users WHERE status = 'active'` and verifying against the Supabase Auth
+dashboard.
+
+---
+
 ## Branch dependency note
 
 `cloud/config.py`, `cloud/auth/superadmin.py`, and `alembic/versions/0010_superadmin_password_hash.py`

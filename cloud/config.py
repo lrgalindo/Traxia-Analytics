@@ -69,6 +69,19 @@ R2_PUBLIC_ENDPOINT_URL: str = os.environ.get("R2_PUBLIC_ENDPOINT_URL", "")
 # Presigned URL TTL for snapshot access (seconds).  Short-lived to prevent link sharing.
 R2_PRESIGN_TTL_SECONDS: int = int(os.environ.get("R2_PRESIGN_TTL_SECONDS", "300"))
 
+# Demo request notifications — sent via Resend (resend.com).
+# RESEND_API_KEY: API key from the Resend dashboard.
+# DEMO_NOTIFY_EMAIL: inbox that receives the lead notification.
+# RESEND_FROM: verified sender address; defaults to onboarding@resend.dev (Resend free tier).
+RESEND_API_KEY: str = os.environ.get("RESEND_API_KEY", "")
+DEMO_NOTIFY_EMAIL: str = os.environ.get("DEMO_NOTIFY_EMAIL", "")
+RESEND_FROM: str = os.environ.get("RESEND_FROM", "")
+# Optional SMTP fallback (used in local testing; overrides Resend when SMTP_HOST is set)
+SMTP_HOST: str = os.environ.get("SMTP_HOST", "")
+SMTP_PORT: str = os.environ.get("SMTP_PORT", "25")
+SMTP_USER: str = os.environ.get("SMTP_USER", "")
+SMTP_PASS: str = os.environ.get("SMTP_PASS", "")
+
 # E2E model serving — allows the FAKE_MODEL_SERVE endpoint to serve real YOLO weights.
 # When set, the manifest SHA256/size matches the real file; the edge pre-caches it.
 REAL_MODEL_SHA256: str = os.environ.get("REAL_MODEL_SHA256", "")

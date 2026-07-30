@@ -269,6 +269,38 @@ dashboard.
 
 ---
 
+## F-11: FORCE ROW LEVEL SECURITY silently blocks new code without a SELECT policy
+
+**Type:** Operational note — not a bug, a recurring failure mode to recognize immediately
+**First encountered:** Migration 0015 (login flow, `traxia_service` on `users` + `user_site_assignments`)
+**Status:** Documented for future reference
+
+Every table in this schema is created with `FORCE ROW LEVEL SECURITY`. This means:
+
+- A role with no policy on a table receives `ERROR: permission denied for table <name>`
+  (`InsufficientPrivilege`, SQLSTATE 42501), **not** zero rows.
+- This applies even to roles that have an explicit `GRANT SELECT` — a grant is necessary
+  but not sufficient. A matching RLS policy must also exist.
+- This applies to the table owner if a non-owner role is active (`SET ROLE`).
+
+**Why it will recur:** Every time a new endpoint or function uses `service_conn()` or
+`user_conn()` to access a table that was added after the relevant RLS policies were written,
+the same `InsufficientPrivilege` error will appear at runtime. It is not visible in static
+analysis, linting, or type checking — it only surfaces when the code path is actually
+executed against a real database.
+
+**How to detect and fix immediately:**
+1. Error is `psycopg2.errors.InsufficientPrivilege` (SQLSTATE 42501) on a table name.
+2. Check `pg_roles` for the active role: `SELECT * FROM pg_roles WHERE rolname = 'traxia_service'`.
+3. Check existing grants: `\dp <tablename>` or `SELECT grantee, privilege_type FROM information_schema.role_table_grants WHERE table_name = '<name>'`.
+4. Check existing policies: `SELECT * FROM pg_policies WHERE tablename = '<name>'`.
+5. Fix: add a migration with `GRANT SELECT ON <table> TO <role>` + `CREATE POLICY ... USING (true)` (for service roles that legitimately need cross-tenant access) or a tenant-scoped `USING` clause.
+
+**Checklist for any new endpoint using `service_conn()`:** verify that every table it reads
+has both a GRANT and a policy for `traxia_service`. Same for `user_conn()` + `traxia_app`.
+
+---
+
 ## Branch dependency note
 
 `cloud/config.py`, `cloud/auth/superadmin.py`, and `alembic/versions/0010_superadmin_password_hash.py`

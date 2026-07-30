@@ -27,6 +27,7 @@ Test strategy (tests/lifecycle/test_mfa.py):
 """
 import logging
 from typing import Any, Dict, Optional
+from urllib.parse import urlencode
 
 import httpx
 from fastapi import APIRouter, HTTPException
@@ -35,6 +36,12 @@ from pydantic import BaseModel, EmailStr
 from cloud import config
 from cloud.auth.tokens import make_user_token
 from cloud.db import service_conn
+
+# Supabase uses "azure" as the provider name for Microsoft
+_PROVIDER_MAP: Dict[str, str] = {
+    "google": "google",
+    "microsoft": "azure",
+}
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/v1/auth", tags=["auth-mfa"])
@@ -51,6 +58,11 @@ class MfaVerifyRequest(BaseModel):
     factor_id: str
     challenge_id: str
     code: str          # 6-digit TOTP code
+
+
+class OAuthExchangeRequest(BaseModel):
+    code: str
+    code_verifier: str
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -166,7 +178,93 @@ def login(body: LoginRequest) -> Dict[str, Any]:
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-# ── (2) MFA second-factor verification ───────────────────────────────────────
+# ── (2) OAuth social login (Google / Microsoft) ──────────────────────────────
+
+@router.get("/oauth/authorize")
+def oauth_authorize(provider: str, redirect_to: str) -> Dict[str, str]:
+    """Return the Supabase OAuth redirect URL for the requested provider.
+
+    The client opens this URL in a browser. After Google/Microsoft authenticate
+    the user, Supabase redirects to redirect_to with `code` and `code_verifier`
+    as query params. The client then calls POST /v1/auth/oauth/exchange.
+
+    Supported providers: "google", "microsoft".
+    """
+    _supabase_headers()  # validates SUPABASE_URL + ANON_KEY; raises 503 if not set
+    supabase_provider = _PROVIDER_MAP.get(provider)
+    if supabase_provider is None:
+        raise HTTPException(
+            status_code=422,
+            detail=f"unsupported_provider: must be one of {list(_PROVIDER_MAP)}",
+        )
+    params = urlencode({"provider": supabase_provider, "redirect_to": redirect_to})
+    url = f"{config.SUPABASE_URL.rstrip('/')}/auth/v1/authorize?{params}"
+    return {"url": url}
+
+
+@router.post("/oauth/exchange")
+def oauth_exchange(body: OAuthExchangeRequest) -> Dict[str, Any]:
+    """Exchange an OAuth authorization code for our JWT with tenant context.
+
+    Calls Supabase's PKCE token exchange, extracts the user's email from the
+    session, then performs the same users-table lookup as login() and issues
+    our JWT via make_user_token(). The Supabase session is discarded.
+
+    Returns the same shape as POST /v1/auth/login.
+    """
+    headers = _supabase_headers()
+    with httpx.Client() as client:
+        resp = client.post(
+            _supabase_url("/auth/v1/token?grant_type=pkce"),
+            headers=headers,
+            json={"auth_code": body.code, "code_verifier": body.code_verifier},
+            timeout=10.0,
+        )
+
+    if not resp.is_success:
+        data = resp.json()
+        raise HTTPException(
+            status_code=resp.status_code,
+            detail=data.get("message") or data.get("error_description") or "oauth_exchange_failed",
+        )
+
+    session = resp.json()
+    email = (session.get("user") or {}).get("email")
+    if not email:
+        log.error("Supabase OAuth exchange succeeded but returned no email in user object")
+        raise HTTPException(status_code=502, detail="supabase_no_email_in_session")
+
+    with service_conn() as cur:
+        cur.execute(
+            """
+            SELECT u.id::text, u.tenant_id::text, u.role, u.partner_id::text,
+                   array_agg(a.site_id::text) FILTER (WHERE a.site_id IS NOT NULL) AS site_ids
+            FROM users u
+            LEFT JOIN user_site_assignments a ON a.user_id = u.id
+            WHERE u.email = %s AND u.status = 'active'
+            GROUP BY u.id, u.tenant_id, u.role, u.partner_id
+            """,
+            (email,),
+        )
+        user_row = cur.fetchone()
+
+    if user_row is None:
+        log.warning(
+            "OAuth login succeeded for %s but user not found or inactive in our DB", email
+        )
+        raise HTTPException(status_code=403, detail="user_not_provisioned")
+
+    access_token = make_user_token(
+        user_id=user_row["id"],
+        tenant_id=user_row["tenant_id"],
+        role=user_row["role"],
+        partner_id=user_row["partner_id"],
+        site_ids=user_row["site_ids"] or None,
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+# ── (3) MFA second-factor verification ───────────────────────────────────────
 
 @router.post("/mfa/verify")
 def mfa_verify(body: MfaVerifyRequest) -> Dict[str, Any]:

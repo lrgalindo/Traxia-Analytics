@@ -16,10 +16,26 @@ from alembic import op
 
 
 def upgrade() -> None:
-    op.execute("GRANT USAGE ON SCHEMA extensions TO traxia_app, traxia_service;")
-    op.execute("GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA extensions TO traxia_app, traxia_service;")
+    # Supabase installs pgcrypto in the 'extensions' schema; vanilla Postgres
+    # does not have this schema.  Skip silently when it is absent (CI / local dev).
+    op.execute("""
+        DO $$
+        BEGIN
+            IF EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = 'extensions') THEN
+                GRANT USAGE ON SCHEMA extensions TO traxia_app, traxia_service;
+                GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA extensions TO traxia_app, traxia_service;
+            END IF;
+        END $$;
+    """)
 
 
 def downgrade() -> None:
-    op.execute("REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA extensions FROM traxia_app, traxia_service;")
-    op.execute("REVOKE USAGE ON SCHEMA extensions FROM traxia_app, traxia_service;")
+    op.execute("""
+        DO $$
+        BEGIN
+            IF EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = 'extensions') THEN
+                REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA extensions FROM traxia_app, traxia_service;
+                REVOKE USAGE ON SCHEMA extensions FROM traxia_app, traxia_service;
+            END IF;
+        END $$;
+    """)

@@ -134,29 +134,19 @@ jobs:
         working-directory: dashboard
         run: npx playwright test
 
-  # ── Job 5: deploy (DISABLED — requires production secrets) ────────────────────
-  # TODO: Enable once production infrastructure is provisioned.
-  #
-  # Required secrets:
-  #   RENDER_API_KEY        — Render.com deploy hook
-  #   JWT_SECRET            — production JWT signing secret (32+ bytes)
-  #   RTSP_ENCRYPTION_KEY   — production Fernet key for RTSP credentials
-  #   PLATFORM_ADMIN_SECRET — production SuperAdmin JWT secret
-  #   ANTHROPIC_API_KEY     — Anthropic API key for Copiloto
-  #   R2_ACCOUNT_ID         — Cloudflare R2 account ID
-  #   R2_ACCESS_KEY_ID      — R2 API key ID
-  #   R2_SECRET_ACCESS_KEY  — R2 API secret key
-  #   SUPABASE_URL          — Supabase project URL (for MFA)
-  #   SUPABASE_ANON_KEY     — Supabase anonymous key
-  #   SUPABASE_SERVICE_ROLE_KEY — Supabase service role key
-  #   DATABASE_URL          — production PostgreSQL URL (Supabase or Render Postgres)
-  #
-  # deploy:
-  #   name: Deploy to production
-  #   needs: [pgtap, pytest, e2e, playwright]
-  #   runs-on: ubuntu-latest
-  #   if: github.ref == 'refs/heads/master' && github.event_name == 'push'
-  #   steps:
-  #     - name: Trigger Render deploy
-  #       run: |
-  #         curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
+  # ── Job 5: deploy ─────────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy to production
+    needs: [pytest]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    steps:
+      - name: Trigger Render deploy
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+        run: |
+          curl -f -s -X POST \
+            "https://api.render.com/v1/services/srv-d9f8qgrtqb8s738t8fjg/deploys" \
+            -H "Authorization: Bearer $RENDER_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{"clearCache":"do_not_clear"}'

@@ -37,16 +37,30 @@ jobs:
         run: bash tests/run_tests.sh
 
   # ── Job 2: pytest (cloud + edge) ─────────────────────────────────────────────
-  # All cloud tests mock the database via unittest.mock.patch — no real Postgres
-  # service needed. The migration chain requires pg_partman (unavailable in the
-  # stock postgres image), so schema setup is deferred to the pgtap job which
-  # uses the custom image.
+  # Builds the custom postgres image (docker/postgres/Dockerfile — postgres:17
+  # with pg_partman + pgTAP) on the runner so migrations succeed without a
+  # pre-published image in a registry.
   pytest:
     name: pytest unit/integration
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Build custom postgres image
+        run: docker build -t traxia-analytics-postgres docker/postgres/
+
+      - name: Start postgres container
+        run: |
+          docker run -d --name pg \
+            -e POSTGRES_PASSWORD=postgres \
+            -e POSTGRES_DB=traxia \
+            -e POSTGRES_USER=postgres \
+            -p 5432:5432 \
+            traxia-analytics-postgres
+          for i in $(seq 1 30); do
+            docker exec pg pg_isready -U postgres -d traxia && break || sleep 2
+          done
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -55,6 +69,11 @@ jobs:
 
       - name: Install dependencies
         run: pip install -r requirements.txt pytest
+
+      - name: Run migrations
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/traxia
+        run: python3 -m alembic upgrade head
 
       - name: Run cloud tests
         env:

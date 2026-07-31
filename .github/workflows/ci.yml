@@ -84,6 +84,9 @@ jobs:
           ANTHROPIC_API_KEY: "sk-test"  # non-empty so copilot 503 guard passes; client is mocked in tests
         run: pytest tests/ -v --ignore=tests/e2e -x
 
+      - name: Install edge dependencies
+        run: pip install -r edge/requirements.txt
+
       - name: Run edge tests
         env:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}

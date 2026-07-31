@@ -81,7 +81,7 @@ jobs:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           RTSP_ENCRYPTION_KEY: ${{ secrets.RTSP_ENCRYPTION_KEY }}
           PLATFORM_ADMIN_SECRET: ${{ secrets.PLATFORM_ADMIN_SECRET }}
-          ANTHROPIC_API_KEY: ""   # disabled in CI — copilot tests mock it
+          ANTHROPIC_API_KEY: "sk-test"  # non-empty so copilot 503 guard passes; client is mocked in tests
         run: pytest tests/ -v --ignore=tests/e2e -x
 
       - name: Run edge tests

@@ -37,23 +37,13 @@ jobs:
         run: bash tests/run_tests.sh
 
   # ── Job 2: pytest (cloud + edge) ─────────────────────────────────────────────
+  # All cloud tests mock the database via unittest.mock.patch — no real Postgres
+  # service needed. The migration chain requires pg_partman (unavailable in the
+  # stock postgres image), so schema setup is deferred to the pgtap job which
+  # uses the custom image.
   pytest:
     name: pytest unit/integration
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: traxia
-          POSTGRES_USER: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
     steps:
       - uses: actions/checkout@v4
@@ -65,11 +55,6 @@ jobs:
 
       - name: Install dependencies
         run: pip install -r requirements.txt pytest
-
-      - name: Run migrations
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/traxia
-        run: python3 -m alembic upgrade head
 
       - name: Run cloud tests
         env:
@@ -84,6 +69,7 @@ jobs:
         env:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           RTSP_ENCRYPTION_KEY: ${{ secrets.RTSP_ENCRYPTION_KEY }}
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/traxia
         run: pytest edge/tests/ -v -x
 
   # ── Job 3: E2E smoke test (docker-compose) ────────────────────────────────────

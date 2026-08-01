@@ -1,5 +1,5 @@
-import type { NextConfig } from 'next'
-const config: NextConfig = {
+
+const config = {
   images: {
     domains: ['lh3.googleusercontent.com'],
   },

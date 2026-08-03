@@ -4,6 +4,76 @@
 > salta a la sección [System Design Document (SDD) v3.4 — FINAL](#system-design-document-sdd-v34--final)
 > más abajo.**
 
+---
+
+## Contexto para Claude Code
+
+### Antes de tocar nada
+```bash
+git status && git log -5 --oneline
+git pull origin master
+```
+
+### Reglas sin excepción
+- Nunca hagas commit ni push sin mostrar el diff completo y esperar aprobación explícita.
+- `dashboard/` es producto real, con RLS de 3 niveles auditado — cualquier cambio ahí requiere el mismo rigor que este proyecto ha exigido todo el día.
+- Antes de crear cuentas/datos de prueba en Supabase de producción (`rvyftmriofvddtlpizlw`), confirma que es intencional — no improvises tenants ni usuarios nuevos sin decirlo explícitamente.
+- Si encuentras duplicados o inconsistencias en variables de entorno (Render, Cloudflare Pages), verifícalas con la lista real del dashboard antes de asumir que están bien.
+
+### Infraestructura viva
+| Servicio | URL / Referencia |
+|---------|-----------------|
+| **Backend (Render)** | https://traxia-analytics.onrender.com |
+| **Frontend (Cloudflare Pages)** | https://traxia-analytics.pages.dev |
+| **Supabase producción** | `rvyftmriofvddtlpizlw` (us-east-1) |
+| **Supabase dev** | `gpzulcoseykkwdwurhgj` |
+| **Keep-alive** | GitHub Actions cron cada 14 min → `/health` |
+
+---
+
+## Estado del Proyecto — 2026-08-03
+
+### Infraestructura de producción
+
+| Servicio | URL / Referencia | Estado |
+|---------|-----------------|--------|
+| **Cloud API (Render)** | https://traxia-analytics.onrender.com | ✅ Live |
+| **Frontend (Cloudflare Pages)** | https://traxia-analytics.pages.dev | ✅ Live — branch `master`, root `dashboard/` |
+| **Base de datos (Supabase)** | Proyecto `rvyftmriofvddtlpizlw`, us-east-1 | ✅ Conectada — migraciones 0001-0016 aplicadas |
+| **Auth de usuarios (Supabase Auth)** | `POST /v1/auth/login` | ✅ Activo — `SUPABASE_URL` + `SUPABASE_ANON_KEY` + `SUPABASE_SERVICE_ROLE_KEY` configurados en Render — probado en vivo 2026-08-03, login exitoso con 3 cuentas de prueba (admin@qa.demo, tenant-admin@demo-retail.com, operator@qa.demo) |
+| **Keep-alive** | `.github/workflows/keep-alive.yml` | ✅ Cron cada 14 min → no hay cold start en demos |
+| **OAuth social (Google / Microsoft)** | `GET /v1/auth/oauth/authorize` | ⚠️ Código construido + mocks — **NO** verificado contra proveedores reales |
+| **Snapshots / Model Registry (R2)** | — | ⚠️ Pendiente — credenciales S3-compatible incorrectas; endpoints retornan 503 descriptivo |
+| **CI/CD (GitHub Actions → Render)** | Push a `master` | ✅ Live — pytest pasa → Render auto-deploys |
+
+### CI/CD y cobertura de tests
+
+- GitHub Actions: 5 jobs (`pgtap`, `pytest`, `e2e`, `playwright`, `deploy`). Solo `pytest` bloquea el deploy.
+- 12 secrets configurados en GitHub Actions (JWT_SECRET, RTSP_ENCRYPTION_KEY, PLATFORM_ADMIN_SECRET, SUPABASE_*, RESEND_*, RENDER_API_KEY).
+- Suite pytest actual: cloud + edge — incluyendo 12 tests OAuth (mocks), 6 tests contact/demo, 9 tests reconciler F-10, tests lifecycle y edge.
+- Migraciones **0001 → 0016** aplicadas a producción (Supabase us-east-1).
+
+### Gaps cerrados en esta sesión
+
+| Ref | Gap | Resolución |
+|-----|-----|------------|
+| **F-10** | Usuarios/partners huérfanos en DB sin cuenta Supabase Auth | `cloud/backoffice/reconciler.py` — detecta `status='active'` > 10 min sin cuenta Supabase → marca `sync_error`. Migración 0016 añade `sync_error` a CHECK constraints de users y partners. |
+| **F-11** | FORCE ROW LEVEL SECURITY puede devolver 0 rows en vez de error cuando falta una política | `docs/AUDIT_FINDINGS.md` — nota operacional con diagnóstico de 4 pasos y checklist para nuevos endpoints con `service_conn()`. |
+| **B-4** | Endpoint de derecho al olvido (GDPR/DPDPA) faltante | `cloud/backoffice/rightofforget.py` — `DELETE /v1/tenants/{tid}/partners/{pid}/data` activo y registrado en `cloud/main.py`. |
+| **B-1** | Todo el código de producto fuera de git | 2026-07-28: rescue commit — `master` ahora contiene `cloud/`, `edge/`, `dashboard/`, `docker/`, `tests/`, `alembic/`. |
+| **B-3 (parcial)** | Model Registry retornaba URL placeholder hardcodeada | Ahora retorna 503 con mensaje explicativo de config-gap en lugar de URL ficticia; R2 sigue sin credenciales válidas. |
+
+### Brechas conocidas y pendientes
+
+| Ref | Brecha | Estado |
+|-----|--------|--------|
+| **B-2** | Edge Gateway STUB en producción (`docker/edge/Dockerfile` excluye ultralytics/PyTorch) | Abierto — inferencia real solo en `Dockerfile.e2e` |
+| **B-3** | R2 no configurado — credenciales S3-compatible pendientes | Parcial — 503 descriptivo, no placeholder |
+| **B-5** | Suite golden del Copiloto (~20 casos, LLM-as-judge) | Abierto |
+| — | Endpoint SuperAdmin login HTTP (`POST /v1/superadmin/login`) | Pendiente — tokens se emiten programáticamente |
+
+---
+
 ## Estado del Proyecto — 2026-07-27
 
 ### Deploy en producción
@@ -13,7 +83,6 @@
 | **Cloud API (Render)** | https://traxia-analytics.onrender.com | ✅ Live |
 | **Base de datos (Supabase)** | Proyecto `rvyftmriofvddtlpizlw`, us-east-1 | ✅ Conectada |
 | **Snapshots (R2)** | — | ⚠️ No configurado — endpoints de snapshot retornan 503 descriptivo |
-| **Auth de usuarios (Supabase Auth)** | — | ⚠️ No configurado — login de Tenant Admin / Operator / Partner bloqueado hasta configurar `SUPABASE_URL` + `SUPABASE_ANON_KEY` en Render |
 
 **Endpoints validados contra infraestructura real (smoke test 2026-07-27):**
 - `GET /health` → 200

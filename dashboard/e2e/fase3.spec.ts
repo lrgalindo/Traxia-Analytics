@@ -29,7 +29,10 @@ test('Motor de Acciones: admin sees three tabs on load', async ({ page }) => {
 test('Motor de Acciones: rule form rendered on Reglas tab', async ({ page }) => {
   await loginAs(page, tokens.tenantAdmin())
   await page.goto('/actions')
-  await expect(page.locator('[data-testid="rule-type-select"]')).toBeVisible()
+  // The form is toggled via "Nueva regla" — open it first
+  await page.getByText('Nueva regla').click()
+  // rule-type-select is a hidden input used to track state; verify the visible chip instead
+  await expect(page.getByRole('button', { name: 'Umbral de ocupación' })).toBeVisible()
   await expect(page.locator('[data-testid="rule-name-input"]')).toBeVisible()
   await expect(page.locator('[data-testid="rule-submit-btn"]')).toBeVisible()
 })
@@ -37,11 +40,13 @@ test('Motor de Acciones: rule form rendered on Reglas tab', async ({ page }) => 
 test('Motor de Acciones: threshold fields appear only for threshold type', async ({ page }) => {
   await loginAs(page, tokens.tenantAdmin())
   await page.goto('/actions')
+  // Open the form — it's toggled by "Nueva regla"
+  await page.getByText('Nueva regla').click()
   // Default type is threshold — extra fields visible
   await expect(page.locator('[data-testid="rule-threshold-input"]')).toBeVisible()
   await expect(page.locator('[data-testid="rule-window-input"]')).toBeVisible()
-  // Switch to SOP type — extra fields disappear
-  await page.selectOption('[data-testid="rule-type-select"]', 'sop_staff_absent_checkout')
+  // Switch to a SOP type by clicking its chip — extra fields disappear
+  await page.getByRole('button', { name: 'SOP — Caja sin personal' }).click()
   await expect(page.locator('[data-testid="rule-threshold-input"]')).not.toBeVisible()
   await expect(page.locator('[data-testid="rule-window-input"]')).not.toBeVisible()
 })
@@ -58,7 +63,10 @@ test('Motor de Acciones: WhatsApp cost section appears when whatsapp selected', 
   await loginAs(page, tokens.tenantAdmin())
   await page.goto('/actions')
   await page.click('[data-testid="actions-tab-channels"]')
-  await page.selectOption('[data-testid="channel-type-select"]', 'whatsapp')
+  // Open the channel form — toggled by "Nuevo canal"
+  await page.getByText('Nuevo canal').click()
+  // channel-type-select are card buttons (not a <select>); click the WhatsApp card
+  await page.locator('[data-testid="channel-type-select"]', { hasText: 'WhatsApp' }).click()
   await expect(page.locator('[data-testid="whatsapp-cost-section"]')).toBeVisible()
   await expect(page.locator('[data-testid="whatsapp-cost-input"]')).toBeVisible()
 })
@@ -67,7 +75,9 @@ test('Motor de Acciones: WhatsApp submit disabled until cost declared', async ({
   await loginAs(page, tokens.tenantAdmin())
   await page.goto('/actions')
   await page.click('[data-testid="actions-tab-channels"]')
-  await page.selectOption('[data-testid="channel-type-select"]', 'whatsapp')
+  // Open the channel form, then select WhatsApp card
+  await page.getByText('Nuevo canal').click()
+  await page.locator('[data-testid="channel-type-select"]', { hasText: 'WhatsApp' }).click()
   await page.fill('[data-testid="channel-name-input"]', 'WA Canal')
   await page.fill('[data-testid="channel-config-input"]', '{"phone_number_id":"123","access_token":"abc"}')
   // Button is disabled before cost is entered
@@ -117,7 +127,8 @@ test('Hallazgos: admin sees finding rows from mocked API', async ({ page }) => {
   await loginAs(page, tokens.tenantAdmin())
   await page.goto('/findings')
   await expect(page.locator('[data-testid="finding-row"]').first()).toBeVisible()
-  await expect(page.locator('[data-testid="finding-row"]').first()).toContainText('quiebre de stock')
+  // Mock summary contains 'quiebre de stock'
+  await expect(page.locator('[data-testid="findings-list"]')).toContainText('quiebre de stock')
 })
 
 test('Hallazgos: partner sees finding rows (RLS scopes to their zones server-side)', async ({ page }) => {

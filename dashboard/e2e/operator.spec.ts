@@ -2,8 +2,9 @@
  * E2E — Regional Operator role.
  *
  * SDD §4.1 matrix for Operator:
- *   ✓ Tráfico/Heatmap, Dwell Time, Copiloto, Exportar
- *   ✗ Comparativo (admin only), Zonas (admin only), Usuarios (admin only), Partners (admin only)
+ *   ✓ Resumen, Tráfico, Permanencia, Colas, Mapa de calor, Copiloto, Hallazgos
+ *   ✗ Sedes (adminOnly), Partners (adminOnly), Backoffice (adminOnly),
+ *     Reventa (adminOnly), Motor de acciones (adminOnly)
  *
  * Also verifies unauthenticated access redirects to /login.
  */
@@ -20,13 +21,14 @@ test('unauthenticated visit to / redirects to /login', async ({ page }) => {
   await expect(page.locator('[data-testid="login-form"]')).toBeVisible()
 })
 
-test('operator sees traffic, dwell, copilot, export in nav', async ({ page }) => {
+test('operator sees analytics and intelligence sections in nav', async ({ page }) => {
   await loginAs(page, tokens.operator())
   const nav = page.locator('nav')
+  await expect(nav.getByText('Resumen')).toBeVisible()
   await expect(nav.getByText('Tráfico', { exact: false })).toBeVisible()
-  await expect(nav.getByText('Dwell Time')).toBeVisible()
+  await expect(nav.getByText('Permanencia')).toBeVisible()
   await expect(nav.getByText('Copiloto')).toBeVisible()
-  await expect(nav.getByText('Exportar')).toBeVisible()
+  await expect(nav.getByText('Hallazgos')).toBeVisible()
 })
 
 test('operator: admin-only nav links are absent from the DOM', async ({ page }) => {
@@ -36,26 +38,27 @@ test('operator: admin-only nav links are absent from the DOM', async ({ page }) 
   await expect(page.locator('[data-testid="nav-zones"]')).toHaveCount(0)
   await expect(page.locator('[data-testid="nav-users"]')).toHaveCount(0)
   await expect(page.locator('[data-testid="nav-partners"]')).toHaveCount(0)
+  await expect(page.locator('[data-testid="nav-sedes"]')).toHaveCount(0)
 })
 
 test('operator navigating directly to /comparison gets redirected', async ({ page }) => {
   await loginAs(page, tokens.operator())
   await page.goto('/comparison')
-  // RequireAuth passes (logged in), AdminOnly redirects to /
-  await page.waitForURL(/\/(traffic|dwell|$)/)
+  // RequireAuth passes (logged in), AdminOnly redirects to /resumen
+  await page.waitForURL(/\/resumen/)
   await expect(page.locator('[data-testid="comparison-table"]')).not.toBeVisible()
 })
 
 test('operator navigating directly to /zones gets redirected', async ({ page }) => {
   await loginAs(page, tokens.operator())
   await page.goto('/zones')
-  await page.waitForURL(/\/(traffic|dwell|$)/)
+  await page.waitForURL(/\/resumen/)
   await expect(page.locator('[data-testid="zone-canvas"]')).not.toBeVisible()
 })
 
 test('operator sees dwell time table', async ({ page }) => {
   await loginAs(page, tokens.operator())
-  await page.click('nav >> text=Dwell Time')
+  await page.click('nav >> text=Permanencia')
   await page.waitForURL(/\/dwell/)
   await expect(page.locator('[data-testid="dwell-table"]')).toBeVisible()
 })

@@ -6,6 +6,7 @@
 import type {
   SiteTrafficDay, SiteTrafficWeek, ZoneDwellDay,
   Site, Camera, Zone, UserListItem, PartnerResponse,
+  ZoneSpec, PartnerCreateResponse,
   ActionRule, ActionChannel, ActionLogEntry, ChannelType,
   ChatResponse, AgentFinding,
 } from '../types'
@@ -62,11 +63,13 @@ export const sites = {
 }
 
 export const cameras = {
+  list: () => req<Camera[]>('GET', '/v1/cameras'),
   bySite: (siteId: string) => req<Camera[]>('GET', `/v1/cameras?site_id=${siteId}`),
   snapshot: (cameraId: string) => `${BASE}/v1/cameras/${cameraId}/snapshot`,
 }
 
 export const zones = {
+  listAll: () => req<Zone[]>('GET', '/v1/zones'),
   list: (cameraId: string) => req<Zone[]>('GET', `/v1/zones?camera_id=${cameraId}`),
   create: (payload: {
     camera_id: string
@@ -131,12 +134,15 @@ export const backoffice = {
     site_ids: string[]
   }) => req<UserListItem>('POST', '/v1/backoffice/users', payload),
 
+  listPartners: () => req<PartnerResponse[]>('GET', '/v1/backoffice/partners'),
+
   createPartner: (payload: {
     name: string
-    contact_email: string
-    site_ids: string[]
+    admin_email: string
+    admin_password: string
     access_expires_at?: string
-  }) => req<PartnerResponse>('POST', '/v1/backoffice/partners', payload),
+    zones: ZoneSpec[]
+  }) => req<PartnerCreateResponse>('POST', '/v1/backoffice/partners', payload),
 
   revokePartner: (partnerId: string) =>
     req<{ revoked: string }>('POST', `/v1/backoffice/partners/${partnerId}/revoke`),

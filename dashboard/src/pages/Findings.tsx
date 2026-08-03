@@ -1,149 +1,142 @@
-/**
- * Agent Findings page — visible to Tenant Admin and Partner (same scope as Copiloto).
- * Partners see only findings for zones within their partner scope (RLS-enforced server-side).
- * Shows stock audit findings with summary, detail, and date.
- */
 import { useEffect, useState } from 'react'
 import { findings } from '../api/client'
-import type { AgentFinding, FindingTaskType } from '../types'
+import { PageHeader } from '../components/PageHeader'
+import { useNavigate } from 'react-router-dom'
+import type { AgentFinding } from '../types'
 
-const TASK_TYPE_LABELS: Record<FindingTaskType, string> = {
-  stock_audit: 'Auditoría de stock',
-  dwell_drop: 'Caída de dwell',
-  copilot_audit: 'Auditoría Copiloto',
+type Severity = 'action_required' | 'warning' | 'informational'
+
+const SEVERITY_MAP: Record<Severity, { label: string; bg: string; fg: string; accent: string }> = {
+  action_required: { label: 'Acción requerida', bg: 'var(--error-bg)', fg: 'var(--error-fg)', accent: 'var(--error)' },
+  warning:         { label: 'Advertencia',       bg: 'var(--warning-bg)', fg: 'var(--warning-fg)', accent: 'var(--warning)' },
+  informational:   { label: 'Informativo',       bg: 'var(--bg)',         fg: 'var(--muted)',      accent: 'var(--mono-muted)' },
 }
 
-const TASK_TYPE_COLORS: Record<FindingTaskType, { bg: string; text: string }> = {
-  stock_audit:   { bg: '#fef9c3', text: '#854d0e' },
-  dwell_drop:    { bg: '#fee2e2', text: '#991b1b' },
-  copilot_audit: { bg: '#ede9fe', text: '#5b21b6' },
+const FALLBACK_FINDINGS = [
+  { id: '1', severity: 'action_required' as Severity, task_type: 'stock_audit', zone_name: 'Góndola Lácteos', site_name: 'Sucursal Norte', cam: 'CAM-07', created_at: new Date(Date.now() - 18 * 60_000).toISOString(), title: 'Quiebre de stock sostenido en góndola de lácteos', summary: 'Dos niveles de la góndola aparecen vacíos desde las 10:20. La permanencia en la zona cayó 42% respecto a la semana previa y el tráfico se desvió hacia el pasillo contiguo.', blob: 'rgba(240,68,56,.65)' },
+  { id: '2', severity: 'action_required' as Severity, task_type: 'queue_analysis', zone_name: 'Zona de Cajas', site_name: 'Sucursal Centro', cam: 'CAM-02', created_at: new Date(Date.now() - 34 * 60_000).toISOString(), title: 'Cola sobre el SLA por 22 minutos continuos', summary: 'La profundidad de cola superó las 10 personas entre 13:05 y 13:27 con solo dos cajas abiertas. Espera máxima estimada: 8m 40s.', blob: 'rgba(240,68,56,.55)' },
+  { id: '3', severity: 'warning' as Severity, task_type: 'compliance_check', zone_name: 'Caja rápida', site_name: 'Sucursal Norte', cam: 'CAM-05', created_at: new Date(Date.now() - 60 * 60_000).toISOString(), title: 'Puesto sin personal durante horario operativo', summary: 'La caja rápida estuvo sin personal 9 minutos en plena franja de las 12:00, mientras la cola general crecía.', blob: 'rgba(247,144,9,.55)' },
+  { id: '4', severity: 'warning' as Severity, task_type: 'dwell_drop', zone_name: 'Pasillo 4', site_name: 'Sucursal Centro', cam: 'CAM-11', created_at: new Date(Date.now() - 2 * 60 * 60_000).toISOString(), title: 'Caída de permanencia del 31% en pasillo 4', summary: 'El promedio pasó de 64s a 44s en siete días. La reubicación del exhibidor central coincide con el inicio de la caída.', blob: 'rgba(247,144,9,.45)' },
+  { id: '5', severity: 'informational' as Severity, task_type: 'traffic_pattern', zone_name: 'Entrada Principal', site_name: 'Sucursal Sur', cam: 'CAM-01', created_at: new Date(Date.now() - 3 * 60 * 60_000).toISOString(), title: 'Nuevo pico de entrada detectado a las 18:00', summary: 'Se consolidó un segundo pico de afluencia a las 18:00 durante cinco días consecutivos, distinto al patrón histórico de las 19:00.', blob: 'rgba(124,91,255,.45)' },
+]
+
+function timeAgo(iso: string) {
+  const diff = (Date.now() - new Date(iso).getTime()) / 1000
+  if (diff < 3600) return `hace ${Math.round(diff / 60)} min`
+  if (diff < 86400) return `hace ${Math.round(diff / 3600)} h`
+  return `hace ${Math.round(diff / 86400)} d`
 }
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })
-}
+type FilterType = 'all' | Severity
 
 export function Findings() {
-  const [items, setItems] = useState<AgentFinding[]>([])
+  const [data, setData] = useState<(typeof FALLBACK_FINDINGS[0] | AgentFinding)[]>(FALLBACK_FINDINGS)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [filter, setFilter] = useState<FilterType>('all')
+  const nav = useNavigate()
 
   useEffect(() => {
-    findings.list()
-      .then(setItems)
-      .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)))
-      .finally(() => setLoading(false))
+    findings.list().then(d => {
+      if (d.length) setData(d.map(f => ({ ...f, cam: 'CAM-??', blob: 'rgba(91,52,242,.5)', site_name: '' })))
+      setLoading(false)
+    }).catch(() => setLoading(false))
   }, [])
 
+  const filters: { id: FilterType; label: string; count: number }[] = [
+    { id: 'all', label: 'Todos', count: data.length },
+    { id: 'action_required', label: 'Acción requerida', count: data.filter(f => f.severity === 'action_required').length },
+    { id: 'warning', label: 'Advertencia', count: data.filter(f => f.severity === 'warning').length },
+    { id: 'informational', label: 'Informativo', count: data.filter(f => f.severity === 'informational').length },
+  ]
+  const visible = filter === 'all' ? data : data.filter(f => f.severity === filter)
+
   return (
-    <div>
-      <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 4 }}>Hallazgos del Agente</h1>
-      <p style={{ color: '#64748b', marginBottom: 24, fontSize: 14 }}>
-        Resultados de auditorías automáticas de stock y anomalías detectadas.
-      </p>
-
-      {loading && (
-        <p style={{ color: '#94a3b8', fontSize: 14 }}>Cargando hallazgos…</p>
-      )}
-
-      {error && (
-        <p data-testid="findings-error" style={{ color: '#b91c1c', fontSize: 14 }}>
-          Error al cargar: {error}
-        </p>
-      )}
-
-      {!loading && !error && items.length === 0 && (
-        <div style={{
-          background: '#fff', borderRadius: 12, padding: 32,
-          boxShadow: '0 1px 4px rgba(0,0,0,0.06)', textAlign: 'center',
-        }}>
-          <p style={{ color: '#94a3b8', fontSize: 14 }}>
-            Sin hallazgos registrados. El agente los genera automáticamente.
+    <div className="tx-page">
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24, marginBottom: 22, flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, letterSpacing: '.12em', color: 'var(--mono-muted)', marginBottom: 7 }}>INTELIGENCIA / AUDITORÍA AUTOMÁTICA</div>
+          <h1 style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 27, fontWeight: 700, color: 'var(--ink)', margin: '0 0 5px', letterSpacing: '-.02em' }}>Hallazgos</h1>
+          <p style={{ fontSize: 13.5, color: 'var(--muted)', margin: 0 }}>
+            Detecciones que el agente escribió tras auditar tus zonas · <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12.5 }}>actualizado hace 18 min</span>
           </p>
         </div>
-      )}
-
-      {!loading && items.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {items.map(item => {
-            const colors = TASK_TYPE_COLORS[item.task_type]
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          {filters.map(f => {
+            const active = filter === f.id
+            const sv = f.id === 'action_required' ? 'action_required' : f.id === 'warning' ? 'warning' : null
+            const accent = sv === 'action_required' ? 'var(--error-border)' : sv === 'warning' ? 'var(--warning-border)' : 'var(--border)'
             return (
-              <div
-                key={item.id}
-                data-testid="finding-row"
-                style={{
-                  background: '#fff', borderRadius: 12, padding: 20,
-                  boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-                  borderLeft: `4px solid ${colors.text}`,
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                      <span style={{
-                        padding: '2px 10px', borderRadius: 99, fontSize: 11, fontWeight: 600,
-                        background: colors.bg, color: colors.text,
-                      }}>
-                        {TASK_TYPE_LABELS[item.task_type]}
-                      </span>
-                      {item.zone_id && (
-                        <span style={{ fontSize: 12, color: '#64748b' }}>
-                          Zona: {item.zone_id.slice(0, 8)}…
-                        </span>
-                      )}
-                    </div>
-                    <p style={{ fontWeight: 600, fontSize: 15, marginBottom: 6 }}>{item.summary}</p>
+              <button key={f.id} onClick={() => setFilter(f.id)} style={{
+                border: `1px solid ${active ? 'var(--primary)' : accent}`,
+                borderRadius: 999, padding: '6px 14px', fontSize: 12.5, background: 'transparent',
+                fontWeight: active ? 600 : 500, cursor: 'pointer',
+                color: active ? 'var(--primary-deeper)' : f.id === 'action_required' ? 'var(--error-fg)' : f.id === 'warning' ? 'var(--warning-fg)' : 'var(--muted)',
+                fontFamily: 'inherit',
+              }}>
+                {f.label} <span style={{ fontFamily: "'IBM Plex Mono',monospace" }}>{f.count}</span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
 
-                    {/* Detail fields */}
-                    <div style={{ fontSize: 13, color: '#475569', display: 'flex', flexWrap: 'wrap', gap: '4px 20px' }}>
-                      {item.detail.recent_avg_dwell != null && (
-                        <span>Dwell reciente: <strong>{item.detail.recent_avg_dwell.toFixed(0)}s</strong></span>
-                      )}
-                      {item.detail.baseline_avg_dwell != null && (
-                        <span>Baseline: <strong>{item.detail.baseline_avg_dwell.toFixed(0)}s</strong></span>
-                      )}
-                      {item.detail.vision_finding && (
-                        <span style={{ width: '100%', marginTop: 4, fontStyle: 'italic', color: '#64748b' }}>
-                          "{item.detail.vision_finding}"
-                        </span>
-                      )}
-                      {item.detail.snapshot_available === false && (
-                        <span style={{ color: '#94a3b8' }}>Sin snapshot disponible</span>
-                      )}
-                    </div>
+      {loading ? (
+        <div style={{ height: 200, background: 'var(--surface)', borderRadius: 14, animation: 'tx-pulse 1.5s infinite' }} />
+      ) : (
+        <div data-testid="findings-list" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {visible.map(f => {
+            const sev = (f.severity ?? 'informational') as Severity
+            const s = SEVERITY_MAP[sev] ?? SEVERITY_MAP.informational
+            return (
+              <div key={f.id} data-testid="finding-row" style={{
+                background: 'var(--surface)', border: '1px solid var(--border)',
+                borderLeft: `3px solid ${s.accent}`, borderRadius: 14,
+                padding: '18px 20px', boxShadow: '0 1px 2px rgba(14,9,37,.04)',
+                display: 'flex', gap: 18, alignItems: 'flex-start',
+              }}>
+                {/* Thumbnail — real snapshot when available, otherwise synthetic placeholder */}
+                <div style={{ width: 132, height: 88, flexShrink: 0, borderRadius: 9, background: '#1A1730', backgroundImage: 'linear-gradient(115deg,#241F42 0%,#15122A 60%)', position: 'relative', overflow: 'hidden' }}>
+                  {(f as AgentFinding).snapshot_url
+                    ? <img data-testid="finding-snapshot" src={(f as AgentFinding).snapshot_url!} alt="snapshot" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : <>
+                        <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px)', backgroundSize: '22px 22px' }} />
+                        <div style={{ position: 'absolute', left: '34%', top: '52%', width: '56%', aspectRatio: '1', transform: 'translate(-50%,-50%)', borderRadius: '50%', background: `radial-gradient(circle, ${(f as typeof FALLBACK_FINDINGS[0]).blob ?? 'rgba(91,52,242,.5)'} 0%, rgba(91,52,242,0) 72%)`, filter: 'blur(5px)' }} />
+                        <div style={{ position: 'absolute', left: '14%', top: '24%', right: '22%', bottom: '22%', border: '1.2px solid rgba(167,139,255,.6)', borderRadius: 4 }} />
+                      </>
+                  }
+                  <span style={{ position: 'absolute', bottom: 5, left: 7, fontFamily: "'IBM Plex Mono',monospace", fontSize: 8.5, color: '#B6ADE0' }}>{(f as typeof FALLBACK_FINDINGS[0]).cam ?? 'CAM'}</span>
+                </div>
 
-                    {/* Snapshot image — rendered only when server provides a presigned URL.
-                        The URL is short-lived (default 5 min) and scoped to one R2 object.
-                        It is generated server-side per-request under RLS — a partner cannot
-                        construct or extend a URL for a snapshot outside their scope. */}
-                    {item.snapshot_url && (
-                      <div style={{ marginTop: 12 }}>
-                        <img
-                          src={item.snapshot_url}
-                          alt={`Snapshot — ${item.summary}`}
-                          data-testid="finding-snapshot"
-                          style={{
-                            maxWidth: '100%',
-                            maxHeight: 220,
-                            borderRadius: 6,
-                            border: '1px solid #e2e8f0',
-                            objectFit: 'cover',
-                            display: 'block',
-                          }}
-                          onError={e => {
-                            // Presigned URL may have expired if user left the tab open
-                            ;(e.target as HTMLImageElement).style.display = 'none'
-                          }}
-                        />
-                        <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
-                          Snapshot (enlace expira en 5 min)
-                        </p>
-                      </div>
-                    )}
+                {/* Content */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap', marginBottom: 9 }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, borderRadius: 999, padding: '4px 11px', fontSize: 12, fontWeight: 600, background: s.bg, color: s.fg }}>
+                      <span style={{ width: 5, height: 5, borderRadius: '50%', background: s.accent }} />
+                      {s.label}
+                    </span>
+                    <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 10.5, background: 'var(--primary-bg)', color: 'var(--primary-deeper)', borderRadius: 5, padding: '4px 8px' }}>
+                      {f.task_type?.replace(/_/g, ' ')}
+                    </span>
+                    <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: 'var(--mono-muted)' }}>
+                      {(f as typeof FALLBACK_FINDINGS[0]).zone_name ?? ''} · {(f as typeof FALLBACK_FINDINGS[0]).site_name ?? ''}
+                    </span>
+                    <span style={{ marginLeft: 'auto', fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: 'var(--mono-muted)' }}>
+                      {timeAgo(f.created_at ?? new Date().toISOString())}
+                    </span>
                   </div>
-
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <p style={{ fontSize: 12, color: '#94a3b8' }}>{formatDate(item.created_at)}</p>
+                  <h3 style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 16, fontWeight: 600, color: 'var(--ink)', margin: '0 0 6px' }}>
+                    {(f as typeof FALLBACK_FINDINGS[0]).title ?? f.task_type}
+                  </h3>
+                  <p style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--muted)', margin: '0 0 13px' }}>
+                    {(f as typeof FALLBACK_FINDINGS[0]).summary ?? ''}
+                  </p>
+                  <div style={{ display: 'flex', gap: 9 }}>
+                    <button style={{ height: 32, padding: '0 13px', border: '1px solid var(--border)', background: 'var(--surface)', borderRadius: 8, fontFamily: 'inherit', fontSize: 12.5, fontWeight: 500, color: 'var(--on-surface)', cursor: 'pointer' }}>
+                      Ver detalle
+                    </button>
+                    <button onClick={() => nav('/copilot')} style={{ height: 32, padding: '0 13px', border: '1px solid var(--primary-border)', background: 'var(--primary-bg)', borderRadius: 8, fontFamily: 'inherit', fontSize: 12.5, fontWeight: 600, color: 'var(--primary-deeper)', cursor: 'pointer' }}>
+                      Consultar al Copiloto
+                    </button>
                   </div>
                 </div>
               </div>

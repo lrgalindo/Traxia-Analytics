@@ -45,6 +45,15 @@ export async function mockApi(page: Page) {
     if (path === '/v1/backoffice/users' && route.request().method() === 'GET')
       return route.fulfill({ json: [] })
 
+    if (path === '/v1/backoffice/partners' && route.request().method() === 'GET')
+      return route.fulfill({ json: [] })
+
+    if (path === '/v1/backoffice/partners' && route.request().method() === 'POST')
+      return route.fulfill({
+        status: 201,
+        json: { partner_id: 'p-new-1', name: 'Test Partner', admin_user_id: 'u-new-1', zones_created: 1 },
+      })
+
     // Motor de Acciones
     if (path === '/v1/actions/rules')    return route.fulfill({ json: [] })
     if (path === '/v1/actions/channels') return route.fulfill({ json: [] })
@@ -114,6 +123,6 @@ export async function loginAs(page: Page, tokenStr: string) {
   await page.fill('[data-testid="email-input"]', 'test@example.com')
   await page.fill('[data-testid="password-input"]', 'test-password')
   await page.click('[data-testid="login-submit"]')
-  // Wait for redirect to dashboard
-  await page.waitForURL(/\/(traffic|dwell|copilot)/)
+  // Wait for redirect to dashboard (default route is /resumen)
+  await page.waitForURL(/\/(resumen|traffic|dwell|copilot)/)
 }

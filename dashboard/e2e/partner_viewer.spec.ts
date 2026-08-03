@@ -2,7 +2,7 @@
  * E2E — Partner Viewer role (role='viewer', pid set).
  *
  * SDD §4.1 matrix for Partner (any role with pid):
- *   ✓ Tráfico/Heatmap (scoped), Dwell Time (own zones — RLS), Copiloto, Hallazgos, Exportar
+ *   ✓ Tráfico/Heatmap (scoped), Permanencia (own zones — RLS), Copiloto, Hallazgos, Exportar
  *   ✗ Comparativo, Zonas, Usuarios, Partners, Motor de Acciones — NEVER rendered
  *   ✗ Backoffice, Reventa, Fleet, Facturación — NEVER rendered
  *
@@ -16,10 +16,10 @@ test.beforeEach(async ({ page }) => {
   await mockApi(page)
 })
 
-test('partner viewer logs in and reaches traffic page', async ({ page }) => {
+test('partner viewer lands on resumen page after login', async ({ page }) => {
   await loginAs(page, tokens.partnerViewer())
-  // Traffic is visible to partners (their scoped traffic view)
-  await expect(page.locator('[data-testid="traffic-chart"], [data-testid="traffic-heatmap"]').first()).toBeVisible()
+  await page.waitForURL(/\/resumen/)
+  await expect(page.locator('[data-testid="resumen-page"]')).toBeVisible()
 })
 
 test('partner viewer nav shows traffic, dwell, copilot, hallazgos, export — no admin items', async ({ page }) => {
@@ -28,7 +28,7 @@ test('partner viewer nav shows traffic, dwell, copilot, hallazgos, export — no
 
   // Visible to partners (Fase 3 adds Hallazgos)
   await expect(nav.getByText('Tráfico', { exact: false })).toBeVisible()
-  await expect(nav.getByText('Dwell Time')).toBeVisible()
+  await expect(nav.getByText('Permanencia')).toBeVisible()
   await expect(nav.getByText('Copiloto')).toBeVisible()
   await expect(nav.getByText('Hallazgos')).toBeVisible()
   await expect(nav.getByText('Exportar')).toBeVisible()
@@ -45,34 +45,34 @@ test('partner viewer nav shows traffic, dwell, copilot, hallazgos, export — no
 test('partner viewer cannot reach /comparison via direct URL', async ({ page }) => {
   await loginAs(page, tokens.partnerViewer())
   await page.goto('/comparison')
-  await page.waitForURL(/\/(traffic|dwell|$)/)
+  await page.waitForURL(/\/(resumen|traffic|dwell)/)
   await expect(page.locator('[data-testid="comparison-table"]')).not.toBeVisible()
 })
 
 test('partner viewer cannot reach /zones via direct URL', async ({ page }) => {
   await loginAs(page, tokens.partnerViewer())
   await page.goto('/zones')
-  await page.waitForURL(/\/(traffic|dwell|$)/)
+  await page.waitForURL(/\/(resumen|traffic|dwell)/)
   await expect(page.locator('[data-testid="zone-canvas"]')).not.toBeVisible()
 })
 
 test('partner viewer cannot reach /users via direct URL', async ({ page }) => {
   await loginAs(page, tokens.partnerViewer())
   await page.goto('/users')
-  await page.waitForURL(/\/(traffic|dwell|$)/)
+  await page.waitForURL(/\/(resumen|traffic|dwell)/)
   await expect(page.locator('[data-testid="users-table"]')).not.toBeVisible()
 })
 
 test('partner viewer cannot reach /partners via direct URL', async ({ page }) => {
   await loginAs(page, tokens.partnerViewer())
   await page.goto('/partners')
-  await page.waitForURL(/\/(traffic|dwell|$)/)
+  await page.waitForURL(/\/(resumen|traffic|dwell)/)
   await expect(page.locator('[data-testid="partner-submit-btn"]')).not.toBeVisible()
 })
 
 test('partner viewer sees dwell time (scoped to their zones via RLS)', async ({ page }) => {
   await loginAs(page, tokens.partnerViewer())
-  await page.click('nav >> text=Dwell Time')
+  await page.click('nav >> text=Permanencia')
   await page.waitForURL(/\/dwell/)
   await expect(page.locator('[data-testid="dwell-table"]')).toBeVisible()
 })
@@ -116,6 +116,6 @@ test('partner viewer cannot reach /actions via direct URL', async ({ page }) => 
   // security mechanism. The real protection is require_tenant_admin on every Motor de
   // Acciones endpoint server-side (returns 403 for any non-admin or partner-scoped token,
   // regardless of what the frontend does). Same principle as all other admin-only routes.
-  await page.waitForURL(/\/(traffic|dwell|$)/)
+  await page.waitForURL(/\/(resumen|traffic|dwell)/)
   await expect(page.locator('[data-testid="actions-tab-rules"]')).not.toBeVisible()
 })

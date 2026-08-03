@@ -71,6 +71,20 @@ export interface PartnerResponse {
   access_expires_at?: string
 }
 
+export interface ZoneSpec {
+  camera_id: string
+  name: string
+  zone_type: string
+  coordinates: Record<string, unknown>
+}
+
+export interface PartnerCreateResponse {
+  partner_id: string
+  name: string
+  admin_user_id: string
+  zones_created: number
+}
+
 export type ZoneType = 'shelf' | 'entrance' | 'exit' | 'checkout' | 'staff_exclusion' | 'generic'
 
 export interface Polygon {
@@ -127,12 +141,18 @@ export interface ChatResponse {
 
 // ── Agent Findings ────────────────────────────────────────────────────────────
 
-export type FindingTaskType = 'stock_audit' | 'dwell_drop' | 'copilot_audit'
+export type FindingTaskType = 'stock_audit' | 'dwell_drop' | 'copilot_audit' | 'queue_analysis' | 'compliance_check' | 'traffic_pattern'
+
+export type FindingSeverity = 'action_required' | 'warning' | 'informational'
 
 export interface AgentFinding {
   id: string
   task_type: FindingTaskType
   zone_id?: string
+  zone_name?: string
+  site_name?: string
+  title?: string
+  severity?: FindingSeverity
   summary: string
   detail: {
     recent_avg_dwell?: number

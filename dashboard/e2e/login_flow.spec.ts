@@ -83,7 +83,7 @@ test('real login form: credentials -> mfa_required -> TOTP -> redirect', async (
   await page.click('[data-testid="mfa-submit"]')
 
   // ── Step 3: real redirect after the component stored the token ──────────
-  await page.waitForURL(/\/(traffic|dwell|copilot)/)
+  await page.waitForURL(/\/resumen/)
   const stored = await page.evaluate(() => localStorage.getItem('traxia_token'))
   expect(stored).toBe(TEST_JWT)
 })

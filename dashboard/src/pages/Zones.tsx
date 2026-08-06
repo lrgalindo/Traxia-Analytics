@@ -34,19 +34,9 @@ export function Zones() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const imgRef = useRef<HTMLImageElement | null>(null)
 
-  // Load cameras (all sites — admin context)
+  // Load all cameras for this tenant (RLS scopes the result automatically)
   useEffect(() => {
-    cameras.bySite('all').catch(() =>
-      // fallback: fetch without site filter
-      fetch('/v1/cameras', { headers: { Authorization: `Bearer ${localStorage.getItem('traxia_token') ?? ''}` } })
-        .then(r => r.json())
-        .then(setCameraList)
-        .catch(() => {})
-    )
-    // for dev/test, load camera list with a broad query
-    fetch('/v1/cameras', {
-      headers: { Authorization: `Bearer ${localStorage.getItem('traxia_token') ?? ''}` }
-    }).then(r => r.ok ? r.json() : []).then(setCameraList).catch(() => {})
+    cameras.list().then(setCameraList).catch(() => {})
   }, [])
 
   // Redraw canvas when points change

@@ -46,7 +46,12 @@ export async function mockApi(page: Page) {
       return route.fulfill({ json: [] })
 
     if (path === '/v1/backoffice/partners' && route.request().method() === 'GET')
-      return route.fulfill({ json: [] })
+      return route.fulfill({
+        json: [
+          { id: 'p-1', name: 'Lácteos CA', status: 'active', admin_email: 'admin@lacteosca.com', access_expires_at: null, created_at: '2026-07-01T00:00:00Z' },
+          { id: 'p-2', name: 'Bebidas CAM', status: 'inactive', admin_email: 'admin@bebidascam.com', access_expires_at: null, created_at: '2026-06-01T00:00:00Z' },
+        ],
+      })
 
     if (path === '/v1/backoffice/partners' && route.request().method() === 'POST')
       return route.fulfill({
@@ -78,13 +83,13 @@ export async function mockApi(page: Page) {
           task_type: 'stock_audit',
           zone_id: 'z1',
           summary: 'Posible quiebre de stock detectado',
+          severity: 'action_required',
           detail: {
             recent_avg_dwell: 45,
             baseline_avg_dwell: 142,
             vision_finding: 'Shelf appears partially empty.',
             snapshot_available: true,
           },
-          // snapshot_url simulates a presigned R2 URL; <img> is rendered when present
           snapshot_url: 'https://example.r2.dev/snapshots/z1/run1.jpg',
           created_at: '2026-07-20T10:00:00Z',
         }],

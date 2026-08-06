@@ -63,12 +63,13 @@ export interface UserListItem {
   site_count?: number
 }
 
-export interface PartnerResponse {
+export interface PartnerListItem {
   id: string
   name: string
-  contact_email: string
-  status: 'active' | 'inactive'
-  access_expires_at?: string
+  status: 'active' | 'inactive' | 'sync_error'
+  admin_email: string | null
+  access_expires_at: string | null
+  created_at: string
 }
 
 export interface ZoneSpec {

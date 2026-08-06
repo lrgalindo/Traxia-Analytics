@@ -8,6 +8,7 @@ Endpoints:
   POST /v1/backoffice/users               — create user + assign to sites
   GET  /v1/backoffice/users               — list tenant users
   DELETE /v1/backoffice/users/{id}/sites/{site_id} — remove site assignment
+  GET  /v1/backoffice/partners            — list tenant partners with admin email
   POST /v1/backoffice/partners            — one-step partner creation + admin account
   POST /v1/backoffice/partners/{id}/revoke — manual partner revocation
 """
@@ -297,6 +298,51 @@ def remove_site_assignment(
 
 
 # ── Partner management ─────────────────────────────────────────────────────────
+
+
+class PartnerListItem(BaseModel):
+    id: str
+    name: str
+    status: str
+    admin_email: Optional[str]
+    access_expires_at: Optional[str]
+    created_at: str
+
+
+@router.get("/partners", response_model=List[PartnerListItem])
+def list_partners(
+    token: dict = Depends(require_tenant_admin),
+) -> List[PartnerListItem]:
+    """List all partners for this tenant with their admin user email."""
+    with user_conn(token) as cur:
+        cur.execute(
+            """
+            SELECT
+                p.id::text        AS id,
+                p.name            AS name,
+                p.status          AS status,
+                p.access_expires_at::text AS access_expires_at,
+                p.created_at::text        AS created_at,
+                u.email           AS admin_email
+            FROM partners p
+            LEFT JOIN users u
+                ON u.partner_id = p.id AND u.role = 'admin'
+            ORDER BY p.created_at DESC
+            """
+        )
+        rows = cur.fetchall()
+    return [
+        PartnerListItem(
+            id=r["id"],
+            name=r["name"],
+            status=r["status"],
+            admin_email=r["admin_email"],
+            access_expires_at=r["access_expires_at"],
+            created_at=r["created_at"],
+        )
+        for r in rows
+    ]
+
 
 @router.post("/partners", response_model=PartnerResponse, status_code=201)
 def create_partner(

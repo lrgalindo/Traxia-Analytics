@@ -5,7 +5,7 @@
  */
 import type {
   SiteTrafficDay, SiteTrafficWeek, ZoneDwellDay,
-  Site, Camera, Zone, UserListItem, PartnerResponse,
+  Site, Camera, Zone, UserListItem, PartnerListItem,
   ZoneSpec, PartnerCreateResponse,
   ActionRule, ActionChannel, ActionLogEntry, ChannelType,
   ChatResponse, AgentFinding,
@@ -134,7 +134,7 @@ export const backoffice = {
     site_ids: string[]
   }) => req<UserListItem>('POST', '/v1/backoffice/users', payload),
 
-  listPartners: () => req<PartnerResponse[]>('GET', '/v1/backoffice/partners'),
+  listPartners: () => req<PartnerListItem[]>('GET', '/v1/backoffice/partners'),
 
   createPartner: (payload: {
     name: string

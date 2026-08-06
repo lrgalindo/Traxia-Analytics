@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from cloud.actions.router import router as actions_router
@@ -33,6 +34,18 @@ async def _lifespan(application: FastAPI):
 
 
 app = FastAPI(title="Traxia Cloud API", version="0.1.0", lifespan=_lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://traxia-analytics.pages.dev",
+        # agregar dominio de website/ cuando se despliegue (Vercel u otro)
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(actions_router)
 app.include_router(contact_router)
 app.include_router(analytics_router)

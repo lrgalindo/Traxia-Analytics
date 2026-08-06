@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import FAQ from '@/components/FAQ'
+import DemoForm from '@/components/DemoForm'
 
 const verticals = [
   { href: '/retail', icon: 'storefront', label: 'Retail', desc: 'Heatmaps de clientes, análisis de zonas calientes y conversión por sección.' },
@@ -220,68 +221,7 @@ export default function HomePage() {
                 Muéstranos tu operación y te mostramos cómo Traxia transforma tus datos espaciales en decisiones.
               </p>
             </div>
-            <form className="bg-surface-container-lowest border border-border-subtle rounded-2xl p-8 flex flex-col gap-5">
-              <div className="grid sm:grid-cols-2 gap-5">
-                <div>
-                  <label htmlFor="nombre" className="block text-body-sm font-medium text-on-surface mb-1.5">Nombre</label>
-                  <input
-                    id="nombre"
-                    type="text"
-                    placeholder="Tu nombre"
-                    className="w-full px-4 py-3 bg-surface-container border border-border-subtle rounded-lg text-body-md text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary transition-colors"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="empresa" className="block text-body-sm font-medium text-on-surface mb-1.5">Empresa</label>
-                  <input
-                    id="empresa"
-                    type="text"
-                    placeholder="Tu empresa"
-                    className="w-full px-4 py-3 bg-surface-container border border-border-subtle rounded-lg text-body-md text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary transition-colors"
-                  />
-                </div>
-              </div>
-              <div>
-                <label htmlFor="email" className="block text-body-sm font-medium text-on-surface mb-1.5">Email corporativo</label>
-                <input
-                  id="email"
-                  type="email"
-                  placeholder="tu@empresa.com"
-                  className="w-full px-4 py-3 bg-surface-container border border-border-subtle rounded-lg text-body-md text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary transition-colors"
-                />
-              </div>
-              <div>
-                <label htmlFor="vertical" className="block text-body-sm font-medium text-on-surface mb-1.5">Vertical / Industria</label>
-                <select
-                  id="vertical"
-                  className="w-full px-4 py-3 bg-surface-container border border-border-subtle rounded-lg text-body-md text-on-surface focus:outline-none focus:border-primary transition-colors"
-                >
-                  <option value="">Selecciona tu industria</option>
-                  <option value="retail">Retail</option>
-                  <option value="logistica">Logística</option>
-                  <option value="banca">Banca</option>
-                  <option value="manufactura">Manufactura</option>
-                  <option value="hospitales">Hospitales</option>
-                  <option value="concesionarias">Concesionarias</option>
-                  <option value="otro">Otro</option>
-                </select>
-              </div>
-              <div>
-                <label htmlFor="mensaje" className="block text-body-sm font-medium text-on-surface mb-1.5">¿Qué quieres resolver?</label>
-                <textarea
-                  id="mensaje"
-                  rows={3}
-                  placeholder="Cuéntanos sobre tu operación..."
-                  className="w-full px-4 py-3 bg-surface-container border border-border-subtle rounded-lg text-body-md text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary transition-colors resize-none"
-                />
-              </div>
-              <button
-                type="submit"
-                className="w-full py-3.5 bg-primary text-on-primary rounded-xl font-medium text-body-md hover:bg-primary/90 transition-colors"
-              >
-                Agendar Demo Gratuita
-              </button>
-            </form>
+            <DemoForm />
           </div>
         </div>
       </section>

@@ -39,7 +39,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://traxia-analytics.pages.dev",
-        # agregar dominio de website/ cuando se despliegue (Vercel u otro)
+        "https://website-eight-tan-22.vercel.app",
+        "https://website-op3x6lpzl-lrgalindos-projects.vercel.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],

@@ -22,6 +22,7 @@ Run via:  ./tests/run_e2e.sh
 Or directly:  python3 tests/e2e/smoke_test.py  (all services must be up first)
 """
 
+import datetime
 import os
 import subprocess
 import sys
@@ -30,9 +31,11 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Optional
 
+import boto3
 import psycopg2
 import psycopg2.extras
 import requests
+from botocore.config import Config
 
 # ── JWT helper (no pyjwt dep needed — we hand-craft for E2E) ────────────────
 import base64, json, hmac, hashlib
@@ -530,6 +533,72 @@ def check_frontend() -> None:
         _check("Dashboard reachable", False, str(exc))
 
 
+# ── (h) R2 storage — upload, presigned URL, 5-min TTL ────────────────────────
+# Validated 2026-08-06 against bucket traxia-analytics:
+#   upload 1053ms · presigned URL generated 3ms · GET → 200 767ms
+#   X-Amz-Expires=300 confirmed in URL · test object deleted after validation
+
+def check_r2_storage() -> None:
+    _log("(h) R2 storage — upload, presigned URL (5-min TTL), HTTP 200 …")
+
+    account_id = os.environ.get("R2_ACCOUNT_ID", "").strip()
+    access_key = os.environ.get("R2_ACCESS_KEY_ID", "").strip()
+    secret_key = os.environ.get("R2_SECRET_ACCESS_KEY", "").strip()
+    bucket     = os.environ.get("R2_BUCKET_SNAPSHOTS", "").strip()
+    ttl        = int(os.environ.get("R2_PRESIGN_TTL_SECONDS", "300"))
+
+    if not all([account_id, access_key, secret_key, bucket]):
+        _skip("R2 storage", "R2_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY / R2_BUCKET_SNAPSHOTS not set")
+        return
+
+    endpoint = f"https://{account_id}.r2.cloudflarestorage.com"
+    s3 = boto3.client(
+        "s3",
+        endpoint_url=endpoint,
+        aws_access_key_id=access_key,
+        aws_secret_access_key=secret_key,
+        region_name="auto",
+        config=Config(signature_version="s3v4"),
+    )
+
+    key = f"smoke-test/{datetime.datetime.utcnow().strftime('%Y%m%dT%H%M%SZ')}.txt"
+    body = b"traxia-r2-smoke-test"
+
+    try:
+        t0 = time.time()
+        s3.put_object(Bucket=bucket, Key=key, Body=body, ContentType="text/plain")
+        upload_ms = int((time.time() - t0) * 1000)
+        _check(f"R2 upload OK (key={key})", True, f"{upload_ms}ms")
+
+        url = s3.generate_presigned_url(
+            "get_object",
+            Params={"Bucket": bucket, "Key": key},
+            ExpiresIn=ttl,
+        )
+        _check("Presigned URL generated", bool(url), url[:60] if url else "empty")
+
+        t0 = time.time()
+        resp = requests.get(url, timeout=15)
+        get_ms = int((time.time() - t0) * 1000)
+        _check(
+            "Presigned URL → HTTP 200, body matches",
+            resp.status_code == 200 and resp.content == body,
+            f"HTTP {resp.status_code}  {get_ms}ms",
+        )
+
+        expires_param = f"X-Amz-Expires={ttl}"
+        _check(
+            f"X-Amz-Expires={ttl} in URL (5-min TTL)",
+            expires_param in url or expires_param.lower() in url.lower(),
+            "confirmed" if expires_param in url else "not found in URL",
+        )
+    finally:
+        try:
+            s3.delete_object(Bucket=bucket, Key=key)
+        except Exception:
+            pass
+
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main() -> None:
@@ -544,6 +613,7 @@ def main() -> None:
     check_copilot()               # (e) — skipped if no ANTHROPIC_API_KEY
     check_findings_and_snapshot() # (f) — skipped audit if no ANTHROPIC_API_KEY
     simulate_outage_and_verify()  # (g)
+    check_r2_storage()            # (h) — skipped if R2 env vars not set
     check_frontend()              # frontend
 
     print("\n" + "═" * 64)

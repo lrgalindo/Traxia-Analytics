@@ -2,122 +2,132 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
-const solucionesLinks = [
-  { href: '/retail', label: 'Retail' },
-  { href: '/logistica', label: 'Logística' },
-  { href: '/banca', label: 'Banca' },
-  { href: '/manufactura', label: 'Manufactura' },
-  { href: '/hospitales', label: 'Hospitales' },
-  { href: '/concesionarias', label: 'Concesionarias' },
+const industries = [
+  { href: '/retail', label: 'Retail', icon: 'storefront', desc: 'Heatmaps, tráfico y conversión por zona' },
+  { href: '/logistica', label: 'Logística', icon: 'local_shipping', desc: 'Dwell de andén, flujo de bodega' },
+  { href: '/banca', label: 'Banca', icon: 'account_balance', desc: 'Colas, tiempos de espera y apertura' },
+  { href: '/manufactura', label: 'Manufactura', icon: 'precision_manufacturing', desc: 'EPP, zonas restringidas, seguridad' },
+  { href: '/hospitales', label: 'Hospitales', icon: 'local_hospital', desc: 'Flujo de pacientes y tiempos de espera' },
+  { href: '/concesionarias', label: 'Concesionarias', icon: 'directions_car', desc: 'Conversión de visitantes, showroom' },
 ]
 
 export default function Nav() {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
 
-  const isActive = (href: string) => pathname === href
+  useEffect(() => {
+    const handler = () => setScrolled(window.scrollY > 8)
+    window.addEventListener('scroll', handler, { passive: true })
+    return () => window.removeEventListener('scroll', handler)
+  }, [])
+
+  useEffect(() => { setMobileOpen(false) }, [pathname])
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border-subtle">
-      <div className="max-w-container-max mx-auto px-gutter flex items-center justify-between h-[80px]">
-        <Link href="/" className="font-display font-bold text-xl text-on-surface tracking-tight">
-          Traxia Analytics
+    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-200 ${
+      scrolled ? 'bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-100' : 'bg-white border-b border-gray-100'
+    }`}>
+      <div className="max-w-container-max mx-auto px-6 flex items-center justify-between h-[68px]">
+
+        {/* Logo */}
+        <Link href="/" className="flex items-center gap-2.5 shrink-0">
+          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M3 12h3M18 12h3M12 3v3M12 18v3"/>
+            </svg>
+          </div>
+          <span className="font-bold text-[17px] tracking-tight text-on-surface">Traxia Analytics</span>
         </Link>
 
-        <div className="hidden md:flex items-center gap-8">
-          <div className="relative group">
-            <button className="flex items-center gap-1 text-body-md text-on-surface-variant hover:text-on-surface transition-colors">
-              Soluciones
-              <span className="material-symbols-outlined text-base">expand_more</span>
+        {/* Desktop nav */}
+        <div className="hidden lg:flex items-center gap-1">
+          {/* Industries dropdown */}
+          <div className="relative" onMouseEnter={() => setDropdownOpen(true)} onMouseLeave={() => setDropdownOpen(false)}>
+            <button className="flex items-center gap-1 px-3 py-2 text-[15px] font-medium text-on-surface-variant hover:text-on-surface rounded-lg hover:bg-gray-50 transition-colors">
+              Industrias
+              <svg className={`w-4 h-4 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
             </button>
-            <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-48 bg-surface-container-lowest border border-border-subtle rounded-xl shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-              <div className="py-2">
-                {solucionesLinks.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className={`block px-4 py-2 text-body-sm hover:bg-surface-container-low transition-colors ${isActive(link.href) ? 'text-primary font-medium' : 'text-on-surface-variant'}`}
-                  >
-                    {link.label}
-                  </Link>
-                ))}
+            {dropdownOpen && (
+              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 w-[520px] bg-white border border-gray-200 rounded-2xl shadow-lg p-4">
+                <div className="grid grid-cols-2 gap-1">
+                  {industries.map((ind) => (
+                    <Link key={ind.href} href={ind.href} className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors group">
+                      <div className="w-8 h-8 bg-primary-fixed rounded-lg flex items-center justify-center shrink-0 mt-0.5">
+                        <span className="material-symbols-outlined text-primary text-[18px]">{ind.icon}</span>
+                      </div>
+                      <div>
+                        <p className="text-[14px] font-semibold text-on-surface group-hover:text-primary transition-colors">{ind.label}</p>
+                        <p className="text-[12px] text-on-surface-variant mt-0.5 leading-tight">{ind.desc}</p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
-          <Link
-            href="/nosotros"
-            className={`text-body-md transition-colors ${isActive('/nosotros') ? 'text-primary font-medium' : 'text-on-surface-variant hover:text-on-surface'}`}
-          >
+          <Link href="/nosotros" className={`px-3 py-2 text-[15px] font-medium rounded-lg transition-colors ${pathname === '/nosotros' ? 'text-primary bg-primary-fixed' : 'text-on-surface-variant hover:text-on-surface hover:bg-gray-50'}`}>
             Nosotros
           </Link>
-
-          <Link
-            href="/precios"
-            className={`text-body-md transition-colors ${isActive('/precios') ? 'text-primary font-medium' : 'text-on-surface-variant hover:text-on-surface'}`}
-          >
+          <Link href="/precios" className={`px-3 py-2 text-[15px] font-medium rounded-lg transition-colors ${pathname === '/precios' ? 'text-primary bg-primary-fixed' : 'text-on-surface-variant hover:text-on-surface hover:bg-gray-50'}`}>
             Precios
           </Link>
         </div>
 
-        <div className="hidden md:flex items-center gap-3">
-          <button className="px-4 py-2 text-body-sm font-medium text-on-surface-variant bg-surface-container rounded-lg hover:bg-surface-container-high transition-colors">
-            Iniciar Sesión
-          </button>
-          <button className="px-4 py-2 text-body-sm font-medium text-on-primary bg-primary rounded-lg hover:bg-primary/90 transition-colors">
+        {/* CTA buttons */}
+        <div className="hidden lg:flex items-center gap-2">
+          <Link href="https://traxia-analytics.pages.dev" className="px-4 py-2 text-[14px] font-medium text-on-surface-variant hover:text-on-surface rounded-lg hover:bg-gray-50 transition-colors">
+            Acceder
+          </Link>
+          <Link href="/#demo" className="px-4 py-2 text-[14px] font-semibold text-white bg-primary rounded-lg hover:bg-primary-dark transition-colors shadow-blue">
             Agendar Demo
-          </button>
+          </Link>
         </div>
 
+        {/* Mobile burger */}
         <button
-          className="md:hidden p-2 text-on-surface-variant"
+          className="lg:hidden p-2 text-on-surface-variant rounded-lg hover:bg-gray-50 transition-colors"
           onClick={() => setMobileOpen(!mobileOpen)}
-          aria-label="Toggle menu"
+          aria-label="Menú"
         >
-          <span className="material-symbols-outlined">{mobileOpen ? 'close' : 'menu'}</span>
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {mobileOpen
+              ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />}
+          </svg>
         </button>
       </div>
 
+      {/* Mobile menu */}
       {mobileOpen && (
-        <div className="md:hidden bg-surface-container-lowest border-t border-border-subtle">
-          <div className="px-gutter py-4 flex flex-col gap-1">
-            <p className="text-label-caps font-label-caps text-text-muted uppercase px-3 py-1">Soluciones</p>
-            {solucionesLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={() => setMobileOpen(false)}
-                className={`block px-3 py-2 rounded-lg text-body-md transition-colors ${isActive(link.href) ? 'text-primary bg-primary-fixed font-medium' : 'text-on-surface-variant hover:bg-surface-container-low'}`}
-              >
-                {link.label}
+        <div className="lg:hidden bg-white border-t border-gray-100 px-4 py-4">
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 px-2 mb-2">Industrias</p>
+          <div className="grid grid-cols-2 gap-1 mb-4">
+            {industries.map((ind) => (
+              <Link key={ind.href} href={ind.href} className="flex items-center gap-2 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors">
+                <span className="material-symbols-outlined text-primary text-[18px]">{ind.icon}</span>
+                <span className="text-[14px] font-medium text-on-surface">{ind.label}</span>
               </Link>
             ))}
-            <div className="border-t border-border-subtle my-2" />
-            <Link
-              href="/nosotros"
-              onClick={() => setMobileOpen(false)}
-              className={`block px-3 py-2 rounded-lg text-body-md transition-colors ${isActive('/nosotros') ? 'text-primary bg-primary-fixed font-medium' : 'text-on-surface-variant hover:bg-surface-container-low'}`}
-            >
-              Nosotros
+          </div>
+          <div className="border-t border-gray-100 pt-3 flex flex-col gap-1">
+            <Link href="/nosotros" className="px-3 py-2.5 text-[15px] font-medium text-on-surface rounded-lg hover:bg-gray-50 transition-colors">Nosotros</Link>
+            <Link href="/precios" className="px-3 py-2.5 text-[15px] font-medium text-on-surface rounded-lg hover:bg-gray-50 transition-colors">Precios</Link>
+          </div>
+          <div className="border-t border-gray-100 mt-3 pt-3 flex flex-col gap-2">
+            <Link href="https://traxia-analytics.pages.dev" className="w-full py-2.5 text-[14px] font-medium text-center text-on-surface border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+              Acceder
             </Link>
-            <Link
-              href="/precios"
-              onClick={() => setMobileOpen(false)}
-              className={`block px-3 py-2 rounded-lg text-body-md transition-colors ${isActive('/precios') ? 'text-primary bg-primary-fixed font-medium' : 'text-on-surface-variant hover:bg-surface-container-low'}`}
-            >
-              Precios
+            <Link href="/#demo" className="w-full py-2.5 text-[14px] font-semibold text-center text-white bg-primary rounded-lg hover:bg-primary-dark transition-colors">
+              Agendar Demo Gratis
             </Link>
-            <div className="border-t border-border-subtle my-2" />
-            <div className="flex flex-col gap-2 px-3">
-              <button className="w-full py-2.5 text-body-sm font-medium text-on-surface-variant bg-surface-container rounded-lg hover:bg-surface-container-high transition-colors">
-                Iniciar Sesión
-              </button>
-              <button className="w-full py-2.5 text-body-sm font-medium text-on-primary bg-primary rounded-lg hover:bg-primary/90 transition-colors">
-                Agendar Demo
-              </button>
-            </div>
           </div>
         </div>
       )}

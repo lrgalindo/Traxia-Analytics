@@ -17,7 +17,7 @@ const faqs = [
   },
   {
     question: '¿Qué ROI puedo esperar?',
-    answer: 'Nuestros clientes reportan en promedio un 30% de reducción en costos operativos y un 60% de mejora en tiempo de respuesta a incidentes en los primeros 6 meses.',
+    answer: 'Depende de tu operación. Trabajamos contigo en una estimación basada en tu volumen de cámaras, número de sedes y los módulos que activarás. Agenda una demo y te mostramos el cálculo con datos reales de tu vertical.',
   },
   {
     question: '¿Qué industrias atiende Traxia?',

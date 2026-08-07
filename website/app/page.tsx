@@ -6,7 +6,7 @@ import DemoForm from '@/components/DemoForm'
 
 const verticals = [
   { href: '/retail', icon: 'storefront', label: 'Retail', desc: 'Heatmaps de clientes, análisis de zonas calientes y conversión por sección.' },
-  { href: '/logistica', icon: 'local_shipping', label: 'Logística', desc: 'Trazabilidad de pallets, zonas de exclusión y optimización de muelles.' },
+  { href: '/logistica', icon: 'local_shipping', label: 'Logística', desc: 'Dwell de andén, zonas de exclusión y flujo de bodega — con las cámaras que ya tienes.' },
   { href: '/banca', icon: 'account_balance', label: 'Banca', desc: 'Inteligencia de sucursales seguras, colas y análisis de utilización espacial.' },
   { href: '/manufactura', icon: 'precision_manufacturing', label: 'Manufactura', desc: 'Seguridad de planta en tiempo real, cumplimiento de EPP y detección de riesgos.' },
   { href: '/hospitales', icon: 'local_hospital', label: 'Hospitales', desc: 'Analítica de flujo de pacientes, tiempos de espera y utilización de zonas.' },
@@ -22,8 +22,8 @@ const steps = [
 ]
 
 const stats = [
-  { value: '30%', label: 'Reducción en costos operativos' },
-  { value: '60%', label: 'Mejora en tiempo de respuesta' },
+  { value: '0', label: 'Cámaras nuevas requeridas' },
+  { value: '100%', label: 'Procesado en tu red local' },
   { value: '<3 días', label: 'Tiempo de implementación' },
   { value: '0', label: 'Datos biométricos almacenados' },
 ]
@@ -188,6 +188,7 @@ export default function HomePage() {
                   <p className="text-inverse-primary text-code-data font-code-data text-xs mb-1">Copiloto AI</p>
                   <p className="text-inverse-on-surface text-body-sm">La Zona B (Entrada Principal) registró 847 personas entre 12:00-14:00h, un 34% más que ayer. Tiempo promedio de permanencia: 4.2 min.</p>
                 </div>
+                <p className="text-inverse-on-surface/40 text-code-data font-code-data text-xs text-center pt-1">Ejemplo ilustrativo — datos de muestra, no de cliente real</p>
               </div>
             </div>
           </div>

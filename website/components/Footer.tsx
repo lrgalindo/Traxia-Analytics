@@ -45,7 +45,7 @@ export default function Footer() {
 
         <div className="border-t border-white/10 mt-xxl pt-xl">
           <p className="text-body-sm text-inverse-on-surface/50 text-center">
-            © 2024 Traxia Analytics. AI-Native Spatial Intelligence.
+            © 2026 Traxia Analytics. AI-Native Spatial Intelligence.
           </p>
         </div>
       </div>

@@ -1,73 +1,239 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-html {
-  scroll-behavior: smooth;
-}
-
+/* ── Base ── */
+html { scroll-behavior: smooth; }
 body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #FFFFFF;
-  color: #111827;
   font-family: 'Inter', sans-serif;
+  background: #ffffff;
+  color: #0f172a;
+  overflow-x: hidden;
 }
 
+/* ── Material icons ── */
 .material-symbols-outlined {
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
-.bg-grid-pattern {
-  background-size: 32px 32px;
-  background-image:
-    linear-gradient(to right, rgba(229, 231, 235, 0.6) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(229, 231, 235, 0.6) 1px, transparent 1px);
-}
-
-.bg-hero-gradient {
-  background: linear-gradient(135deg, #EFF6FF 0%, #FFFFFF 50%, #F0FDF4 100%);
-}
-
+/* ── Gradient text (on dark bg) ── */
 .gradient-text {
-  background: linear-gradient(135deg, #1A56DB 0%, #3B82F6 100%);
+  background: linear-gradient(135deg, #818cf8 0%, #a78bfa 60%, #c084fc 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
+/* ── Gradient text on light bg (indigo → violet) ── */
+.gradient-text-violet {
+  background: linear-gradient(135deg, #6366f1 0%, #7c3aed 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* kept for backward compat */
+.gradient-text-blue {
+  background: linear-gradient(135deg, #6366f1 0%, #7c3aed 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Line grid — light hero background ── */
+.line-grid {
+  background-image:
+    linear-gradient(to right,  rgba(15,23,42,0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15,23,42,0.045) 1px, transparent 1px);
+  background-size: 44px 44px;
+  pointer-events: none;
+}
+
+/* ── Dot grid — dark sections ── */
+.dot-grid {
+  background-image: radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+/* ── Hero background (dark — vertical pages) ── */
+.hero-bg {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -5%, rgba(99,102,241,0.22) 0%, transparent 65%),
+    radial-gradient(ellipse 40% 30% at 80% 20%, rgba(124,58,237,0.12) 0%, transparent 60%),
+    linear-gradient(180deg, #04060f 0%, #06091a 60%, #08122a 100%);
+}
+
+/* ── Noise grain overlay on dark hero ── */
+.hero-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Glass card (dark sections) ── */
+.glass-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.glass-card:hover {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.12);
+}
+
+/* ── Glow border card (dark) ── */
+.glow-border {
+  position: relative;
+  border: 1px solid rgba(99,102,241,0.2);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.glow-border:hover {
+  border-color: rgba(99,102,241,0.5);
+  box-shadow: 0 0 0 1px rgba(99,102,241,0.15), 0 8px 32px rgba(99,102,241,0.15);
+}
+
+/* ── Vertical card (light sections) ── */
 .card-hover {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 .card-hover:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.09);
+  border-color: rgba(99,102,241,0.3) !important;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #F9FAFB; }
-::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #9CA3AF; }
-
-/* Animate */
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+/* ── Announcement banner pill ── */
+.badge-announce {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 9999px;
+  padding: 5px 14px 5px 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #475569;
+  cursor: default;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }
-.animate-fade-in-up {
-  animation: fadeInUp 0.5s ease forwards;
+.badge-announce .badge-new-pill {
+  background: #6366f1;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  border-radius: 9999px;
+  padding: 2px 8px;
 }
 
+/* ── AI badge (dark sections) ── */
+.badge-ai {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(99,102,241,0.12);
+  border: 1px solid rgba(99,102,241,0.25);
+  color: #a5b4fc;
+  border-radius: 9999px;
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ── Feature pill tag (vertical cards) ── */
+.feature-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #eef2ff;
+  border: 1px solid #e0e7ff;
+  color: #4338ca;
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* ── Ticker / logo carousel ── */
+.ticker-track {
+  animation: ticker 32s linear infinite;
+  will-change: transform;
+}
+.ticker-track:hover { animation-play-state: paused; }
+
+/* ── Live indicator ── */
+.live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  animation: pulseGreen 2s ease-in-out infinite;
+}
+
+/* ── Gradient button ── */
+.btn-gradient {
+  background: linear-gradient(135deg, #6366f1 0%, #7c3aed 100%);
+  color: white;
+  font-weight: 600;
+  transition: opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+.btn-gradient:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(99,102,241,0.4);
+}
+
+/* ── Outline button ── */
+.btn-outline {
+  background: white;
+  color: #0f172a;
+  font-weight: 600;
+  border: 1px solid #e2e8f0;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.btn-outline:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: #f8fafc; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #6366f1; }
+
+/* ── Keyframes ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 @keyframes ticker {
-  0% { transform: translateX(0); }
+  0%   { transform: translateX(0); }
   100% { transform: translateX(-50%); }
 }
-.ticker-track {
-  animation: ticker 25s linear infinite;
+@keyframes pulseGreen {
+  0%,100% { box-shadow: 0 0 6px rgba(16,185,129,0.5); }
+  50%      { box-shadow: 0 0 14px rgba(16,185,129,0.9); }
 }
-.ticker-track:hover {
-  animation-play-state: paused;
+@keyframes pulseGlow {
+  0%,100% { box-shadow: 0 0 8px rgba(99,102,241,0.4); }
+  50%      { box-shadow: 0 0 20px rgba(99,102,241,0.7); }
 }
+
+/* ── Animation utilities ── */
+.animate-fade-up { animation: fadeUp 0.55s ease forwards; }
+.animate-fade-up-d1 { animation: fadeUp 0.55s 0.1s ease both; }
+.animate-fade-up-d2 { animation: fadeUp 0.55s 0.2s ease both; }
+.animate-fade-up-d3 { animation: fadeUp 0.55s 0.3s ease both; }

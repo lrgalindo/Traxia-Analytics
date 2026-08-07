@@ -1,149 +1,111 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
+import VerticalHero from '@/components/VerticalHero'
 
 export const metadata: Metadata = {
-  title: 'Hospitales',
-  description: 'Analítica de Flujo de Pacientes para Centros de Salud. Optimiza tiempos de espera, utilización de zonas y cumplimiento con inteligencia espacial.',
+  title: 'Hospitales — Analítica de Flujo de Pacientes',
+  description: 'Optimiza tiempos de espera, utilización de consultorios y flujo de pacientes con IA espacial. Sin biometría, cumpliendo normativas de salud.',
 }
 
 export default function HospitalesPage() {
   return (
-    <main className="flex-grow pt-[80px]">
-      <section className="relative bg-grid-pattern overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-background via-background/95 to-background pointer-events-none" />
-        <div className="relative max-w-container-max mx-auto px-gutter py-xxl md:py-[96px]">
-          <div className="grid md:grid-cols-2 gap-xl items-center">
-            <div>
-              <div className="inline-flex items-center gap-2 bg-primary-fixed rounded-full px-3 py-1 mb-6">
-                <span className="material-symbols-outlined text-primary text-sm">local_hospital</span>
-                <span className="text-label-caps font-label-caps text-primary uppercase">Healthcare Intelligence</span>
-              </div>
-              <h1 className="text-display font-display text-on-surface mb-6">
-                Analítica de Flujo de Pacientes para Centros de Salud.
-              </h1>
-              <p className="text-body-lg text-on-surface-variant mb-8 max-w-lg">
-                Optimiza la experiencia del paciente y la eficiencia operacional con analítica espacial en tiempo real — cumpliendo con todas las normativas de privacidad de salud.
-              </p>
-              <div className="flex flex-wrap gap-3">
-                <button className="px-6 py-3 bg-primary text-on-primary rounded-xl font-medium text-body-md hover:bg-primary/90 transition-colors">
-                  Agendar Demo
-                </button>
-                <button className="px-6 py-3 bg-surface-container text-on-surface rounded-xl font-medium text-body-md hover:bg-surface-container-high transition-colors">
-                  Ver Cumplimiento
-                </button>
-              </div>
-            </div>
-            <div className="relative">
-              <div className="bg-inverse-surface rounded-2xl p-6 aspect-video flex items-center justify-center relative overflow-hidden">
-                <div className="absolute inset-0 bg-grid-pattern opacity-20" />
-                <div className="relative z-10 text-center">
-                  <div className="inline-flex items-center justify-center w-20 h-20 bg-primary/20 rounded-2xl mb-4">
-                    <span className="material-symbols-outlined text-inverse-primary text-5xl">emergency</span>
+    <main>
+      <VerticalHero
+        badge="Hospitales · Inteligencia Espacial"
+        icon="local_hospital"
+        h1={<>Analítica de flujo de pacientes <span className="gradient-text">para centros de salud.</span></>}
+        subtitle="Optimiza la experiencia del paciente y la eficiencia operacional con analítica espacial en tiempo real — sin biometría, cumpliendo con todas las normativas de privacidad de salud."
+        stats={[
+          { value: '0', label: 'Biométricos' },
+          { value: '0', label: 'Hardware nuevo' },
+          { value: '< 24 h', label: 'Go-live' },
+        ]}
+        secondaryCta="Ver Cumplimiento"
+        liveStat="18 min"
+        liveLabel="tiempo promedio de espera"
+      />
+
+      {/* Live KPIs */}
+      <section className="py-24 bg-white">
+        <div className="max-w-container-max mx-auto px-6">
+          <div className="text-center mb-14">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-primary mb-3">Telemetría en Vivo</p>
+            <h2 className="text-headline-lg text-on-surface">KPIs de salud en tiempo real</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {[
+              { icon: 'pending', label: 'Tiempo Promedio de Espera', value: '18', unit: 'min', trend: '-22% este mes', up: true },
+              { icon: 'meeting_room', label: 'Utilización de Consultorios', value: '73', unit: '%', trend: 'Óptimo', up: true },
+              { icon: 'groups', label: 'Pacientes en Sala de Espera', value: '12', unit: '', trend: 'Capacidad al 80%', up: false, warn: true },
+            ].map((m, i) => (
+              <div key={i} className="bg-white border border-slate-200 rounded-2xl p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="material-symbols-outlined text-primary text-[20px]">{m.icon}</span>
+                  <div className="flex items-center gap-1.5">
+                    <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${m.warn ? 'bg-amber-400' : 'bg-emerald-400'}`} />
+                    <span className={`text-[11px] font-semibold ${m.warn ? 'text-amber-500' : 'text-emerald-500'}`}>
+                      {m.warn ? 'AVISO' : 'EN VIVO'}
+                    </span>
                   </div>
-                  <p className="text-inverse-on-surface/70 text-body-sm font-code-data">PATIENT FLOW — EN VIVO</p>
                 </div>
-                <div className="absolute top-4 left-4 bg-success/20 border border-success/40 rounded-lg px-3 py-1.5 flex items-center gap-1.5">
-                  <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
-                  <span className="text-success text-label-caps font-label-caps">EN VIVO</span>
-                </div>
+                <p className="text-4xl font-black text-on-surface mb-1">
+                  {m.value}<span className="text-lg text-on-surface-variant font-normal ml-1">{m.unit}</span>
+                </p>
+                <p className="text-[14px] text-on-surface-variant mb-3">{m.label}</p>
+                <p className={`text-[12px] font-medium ${m.warn ? 'text-amber-500' : 'text-emerald-500'}`}>{m.trend}</p>
               </div>
-            </div>
+            ))}
           </div>
+          <p className="text-center text-[11px] text-on-surface-variant/50 mt-5">Ejemplo ilustrativo — datos de muestra, no de cliente real</p>
         </div>
       </section>
 
-      <section className="py-xxl bg-surface-container-low">
-        <div className="max-w-container-max mx-auto px-gutter">
-          <div className="text-center mb-xl">
-            <p className="text-label-caps font-label-caps text-primary uppercase tracking-widest mb-3">Telemetría en Vivo</p>
-            <h2 className="text-headline-lg font-headline-lg text-on-surface">KPIs de Salud en Tiempo Real</h2>
+      {/* Compliance + Integration */}
+      <section className="py-24 bg-surface-alt">
+        <div className="max-w-container-max mx-auto px-6">
+          <div className="text-center mb-14">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-primary mb-3">Integración y Cumplimiento</p>
+            <h2 className="text-headline-lg text-on-surface">Diseñado para el sector salud</h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-md">
-            <div className="bg-surface-container-lowest border border-border-subtle rounded-xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <span className="material-symbols-outlined text-primary">pending</span>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
-                  <span className="text-label-caps font-label-caps text-success">EN VIVO</span>
-                </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="card-hover bg-white border border-slate-200 rounded-2xl p-7">
+              <div className="w-11 h-11 bg-primary-fixed rounded-xl flex items-center justify-center mb-5">
+                <span className="material-symbols-outlined text-primary text-[20px]">verified_user</span>
               </div>
-              <p className="text-display font-display text-on-surface">18<span className="text-headline-md text-on-surface-variant"> min</span></p>
-              <p className="text-body-md text-on-surface-variant mt-1">Tiempo Promedio de Espera</p>
-              <p className="text-body-sm text-success mt-3 flex items-center gap-1">
-                <span className="material-symbols-outlined text-base">trending_down</span>
-                -22% este mes
+              <h3 className="text-[17px] font-bold text-on-surface mb-3">Privacidad por Diseño</h3>
+              <p className="text-[14px] text-on-surface-variant mb-5 leading-relaxed">
+                Sin reconocimiento facial. Sin datos biométricos. Traxia detecta movimiento y flujo de personas de forma anonimizada, cumpliendo con normativas locales de salud.
               </p>
-            </div>
-            <div className="bg-surface-container-lowest border border-border-subtle rounded-xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <span className="material-symbols-outlined text-primary">meeting_room</span>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
-                  <span className="text-label-caps font-label-caps text-success">EN VIVO</span>
-                </div>
-              </div>
-              <p className="text-display font-display text-on-surface">73<span className="text-headline-md text-on-surface-variant">%</span></p>
-              <p className="text-body-md text-on-surface-variant mt-1">Utilización de Consultorios</p>
-              <p className="text-body-sm text-success mt-3 flex items-center gap-1">
-                <span className="material-symbols-outlined text-base">trending_up</span>
-                Óptimo
-              </p>
-            </div>
-            <div className="bg-surface-container-lowest border border-border-subtle rounded-xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <span className="material-symbols-outlined text-primary">groups</span>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 rounded-full bg-[#FBBF24] animate-pulse" />
-                  <span className="text-label-caps font-label-caps text-[#FBBF24]">AVISO</span>
-                </div>
-              </div>
-              <p className="text-display font-display text-on-surface">12</p>
-              <p className="text-body-md text-on-surface-variant mt-1">Pacientes en Sala de Espera</p>
-              <p className="text-body-sm text-[#FBBF24] mt-3 flex items-center gap-1">
-                <span className="material-symbols-outlined text-base">warning</span>
-                Capacidad al 80%
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="py-xxl">
-        <div className="max-w-container-max mx-auto px-gutter">
-          <div className="text-center mb-xl">
-            <p className="text-label-caps font-label-caps text-primary uppercase tracking-widest mb-3">Integración y Cumplimiento</p>
-            <h2 className="text-headline-lg font-headline-lg text-on-surface">Diseñado para el Sector Salud</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-md">
-            <div className="bg-surface-container-lowest border border-border-subtle rounded-xl p-6">
-              <div className="w-12 h-12 bg-primary-fixed rounded-xl flex items-center justify-center mb-4">
-                <span className="material-symbols-outlined text-primary">verified_user</span>
-              </div>
-              <h3 className="text-headline-md font-headline-md text-on-surface mb-3">Privacidad por Diseño</h3>
-              <p className="text-body-md text-on-surface-variant mb-4">
-                Sin reconocimiento facial. Sin datos biométricos. Traxia detecta movimiento y flujo de personas de forma anonimizada, cumpliendo con HIPAA, GDPR y normativas locales de salud.
-              </p>
-              <ul className="flex flex-col gap-2">
-                {['HIPAA Compliant', 'GDPR Ready', 'Zero Biometrics', 'Datos procesados en el edge'].map((item, i) => (
-                  <li key={i} className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-success text-base">check_circle</span>
-                    <span className="text-body-sm text-on-surface-variant">{item}</span>
+              <ul className="space-y-2">
+                {['Zero Biometrics', 'Privacidad por diseño', 'Datos procesados en el edge', 'Sin egreso de video de pacientes'].map((item, i) => (
+                  <li key={i} className="flex items-center gap-2.5">
+                    <div className="w-4 h-4 rounded-full bg-primary-fixed flex items-center justify-center shrink-0">
+                      <svg className="w-2.5 h-2.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <span className="text-[13px] text-on-surface-variant">{item}</span>
                   </li>
                 ))}
               </ul>
             </div>
-            <div className="bg-surface-container-lowest border border-border-subtle rounded-xl p-6">
-              <div className="w-12 h-12 bg-primary-fixed rounded-xl flex items-center justify-center mb-4">
-                <span className="material-symbols-outlined text-primary">integration_instructions</span>
+            <div className="card-hover bg-white border border-slate-200 rounded-2xl p-7">
+              <div className="w-11 h-11 bg-primary-fixed rounded-xl flex items-center justify-center mb-5">
+                <span className="material-symbols-outlined text-primary text-[20px]">integration_instructions</span>
               </div>
-              <h3 className="text-headline-md font-headline-md text-on-surface mb-3">Integración con tu Infraestructura</h3>
-              <p className="text-body-md text-on-surface-variant mb-4">
+              <h3 className="text-[17px] font-bold text-on-surface mb-3">Integración con tu Infraestructura</h3>
+              <p className="text-[14px] text-on-surface-variant mb-5 leading-relaxed">
                 Compatible con los sistemas de CCTV más utilizados en hospitales. Implementación sin interrupciones operacionales.
               </p>
-              <ul className="flex flex-col gap-2">
-                {['Conecta vía RTSP/ONVIF', 'Sin reemplazar cámaras', 'API para HIS/HER integration', 'Dashboard web sin instalación'].map((item, i) => (
-                  <li key={i} className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-success text-base">check_circle</span>
-                    <span className="text-body-sm text-on-surface-variant">{item}</span>
+              <ul className="space-y-2">
+                {['Conecta vía RTSP/ONVIF', 'Sin reemplazar cámaras', 'API para integración HIS/HER', 'Dashboard web sin instalación de cliente'].map((item, i) => (
+                  <li key={i} className="flex items-center gap-2.5">
+                    <div className="w-4 h-4 rounded-full bg-primary-fixed flex items-center justify-center shrink-0">
+                      <svg className="w-2.5 h-2.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <span className="text-[13px] text-on-surface-variant">{item}</span>
                   </li>
                 ))}
               </ul>
@@ -152,17 +114,15 @@ export default function HospitalesPage() {
         </div>
       </section>
 
-      <section className="py-xxl bg-primary">
-        <div className="max-w-container-max mx-auto px-gutter text-center">
-          <h2 className="text-headline-lg font-headline-lg text-on-primary mb-4">
-            Mejor experiencia de paciente. Cero cambios de hardware.
-          </h2>
-          <p className="text-body-lg text-on-primary/80 mb-8 max-w-xl mx-auto">
-            Agenda una demo para tu centro de salud y descubre cómo Traxia transforma la gestión de flujos.
-          </p>
-          <button className="px-8 py-4 bg-on-primary text-primary rounded-xl font-medium text-body-lg hover:bg-on-primary/90 transition-colors">
+      {/* CTA */}
+      <section className="hero-bg py-20 relative overflow-hidden">
+        <div className="dot-grid absolute inset-0 opacity-40" />
+        <div className="relative z-10 max-w-container-max mx-auto px-6 text-center">
+          <h2 className="text-headline-lg text-white mb-4">Mejor experiencia de paciente. Cero cambios de hardware.</h2>
+          <p className="text-body-lg text-white/50 mb-8 max-w-xl mx-auto">Agenda una demo para tu centro de salud y descubre cómo Traxia transforma la gestión de flujos.</p>
+          <Link href="/#demo" className="btn-gradient inline-flex px-8 py-4 rounded-xl text-[15px]">
             Agendar Demo Gratuita
-          </button>
+          </Link>
         </div>
       </section>
     </main>

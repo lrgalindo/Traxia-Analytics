@@ -31,6 +31,53 @@ git pull origin master
 
 ---
 
+## Estado del Proyecto — 2026-08-07
+
+### Website de marketing (`website/`) — Rediseño completo
+
+**Live:** `https://website-eight-tan-22.vercel.app` · Alias productión Vercel
+
+#### Qué se hizo
+
+| Área | Cambio |
+|------|--------|
+| **Design system** | Migrado a paleta indigo/violeta (`#6366f1` → `#7c3aed`). Tokens: `lavender`, `lavender-mid`, `line-grid`, `btn-gradient`, `badge-announce`, `feature-pill`. |
+| **Homepage hero** | Reemplazado dark hero → light hero split (texto izq. + mockup de producto der.). Fondo blanco con grid de líneas, badge "NUEVO", trust badges objetivos. |
+| **Sección verticales** | Fondo `bg-lavender` (`#f5f3ff`), cards blancas con icon en `#ede9fe`, feature pills estilo indigo, arrow CTA. |
+| **Copiloto AI** | Sección blanca split: copy izq. + mockup de dashboard + chat flotante der. (`hidden lg:block`). |
+| **Páginas verticales** | Todas (retail, logística, banca, manufactura, hospitales, concesionarias) usan `VerticalHero` compartido con hero oscuro + secciones light. |
+| **Nav** | `isDark` ya no incluye `/` (homepage es light). "Acceder" → "Iniciar sesión". Fix de gap hover en dropdown de Soluciones (div puente `pt-2`). |
+| **Wording** | Eliminadas todas las referencias a clientes inventados: "500 gerentes", "50+ empresas confían". Reemplazado por valores verificables (verticales, tiempo de deploy, zero biométricos). |
+| **Responsividad** | Validado 375px / 768px / 1440px. Breakpoints corregidos de `lg:` → `md:` en hero, Copiloto y demo form. Paneles laterales del mockup ocultos en móvil (`hidden sm:block`). Tabla de precios con `min-w-[480px]` + scroll horizontal. |
+
+#### Archivos clave
+
+```
+website/
+  tailwind.config.ts          — tokens completos (colores, sombras, keyframes)
+  app/globals.css             — utilidades: .line-grid .hero-bg .glass-card .btn-gradient .badge-announce .feature-pill
+  app/page.tsx                — homepage (light hero, verticales lavanda, copiloto, demo form)
+  app/layout.tsx              — layout global + metadata
+  components/Nav.tsx          — nav sticky con dropdown hover corregido
+  components/Footer.tsx       — dark footer con live-dot
+  components/VerticalHero.tsx — hero compartido para las 6 páginas de verticales
+  components/DemoForm.tsx     — form → POST /v1/contact/demo-request (backend Render)
+  components/FAQ.tsx          — acordeón sin ROI inventado
+  app/{retail,logistica,banca,manufactura,hospitales,concesionarias}/page.tsx
+  app/precios/page.tsx
+  app/nosotros/page.tsx
+```
+
+#### Restricciones de contenido en vigor
+
+- Sin reconocimiento facial como feature anunciado
+- Sin métricas de ROI inventadas (%, tiempos)
+- Sin menciones a clientes o empresas específicas que no sean reales
+- Sin referencias a "bóvedas", "conteo de pallets", "OTIF"
+- Demo form → backend real (`https://traxia-analytics.onrender.com/v1/contact/demo-request`)
+
+---
+
 ## Estado del Proyecto — 2026-08-03
 
 ### Infraestructura de producción

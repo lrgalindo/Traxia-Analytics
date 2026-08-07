@@ -1,85 +1,282 @@
 'use client'
 
 import Link from 'next/link'
-import FAQ from '@/components/FAQ'
 import DemoForm from '@/components/DemoForm'
+import FAQ from '@/components/FAQ'
 
 const verticals = [
-  { href: '/retail', icon: 'storefront', label: 'Retail', desc: 'Heatmaps de clientes, análisis de zonas calientes y conversión por sección.' },
-  { href: '/logistica', icon: 'local_shipping', label: 'Logística', desc: 'Dwell de andén, zonas de exclusión y flujo de bodega — con las cámaras que ya tienes.' },
-  { href: '/banca', icon: 'account_balance', label: 'Banca', desc: 'Inteligencia de sucursales seguras, colas y análisis de utilización espacial.' },
-  { href: '/manufactura', icon: 'precision_manufacturing', label: 'Manufactura', desc: 'Seguridad de planta en tiempo real, cumplimiento de EPP y detección de riesgos.' },
-  { href: '/hospitales', icon: 'local_hospital', label: 'Hospitales', desc: 'Analítica de flujo de pacientes, tiempos de espera y utilización de zonas.' },
-  { href: '/concesionarias', icon: 'directions_car', label: 'Concesionarias', desc: 'Conversión de visitantes, tiempo de permanencia y análisis de showroom.' },
+  {
+    icon: 'storefront',
+    title: 'Retail',
+    href: '/retail',
+    features: [
+      { icon: 'directions_walk', label: 'Análisis de Afluencia' },
+      { icon: 'trending_up',     label: 'Tasa de Conversión' },
+    ],
+  },
+  {
+    icon: 'warehouse',
+    title: 'Logística',
+    href: '/logistica',
+    features: [
+      { icon: 'verified_user',   label: 'Cumplimiento de Almacén' },
+      { icon: 'block',           label: 'Zonas de Exclusión de Personal' },
+    ],
+  },
+  {
+    icon: 'account_balance',
+    title: 'Banca',
+    href: '/banca',
+    features: [
+      { icon: 'groups',          label: 'Optimización de Filas' },
+      { icon: 'security',        label: 'Inteligencia de Sucursal Segura' },
+    ],
+  },
+  {
+    icon: 'factory',
+    title: 'Manufactura',
+    href: '/manufactura',
+    features: [
+      { icon: 'health_and_safety', label: 'Cumplimiento de EPP' },
+      { icon: 'sensors',           label: 'Alertas de Proximidad' },
+    ],
+  },
+  {
+    icon: 'local_hospital',
+    title: 'Hospitales',
+    href: '/hospitales',
+    features: [
+      { icon: 'groups',          label: 'Ocupación en Tiempo Real' },
+      { icon: 'schedule',        label: 'Tiempos de Espera' },
+    ],
+  },
+  {
+    icon: 'directions_car',
+    title: 'Concesionarias',
+    href: '/concesionarias',
+    features: [
+      { icon: 'visibility',      label: 'Interés por Vehículo' },
+      { icon: 'timer',           label: 'Tiempo de Atención' },
+    ],
+  },
 ]
 
 const steps = [
-  { icon: 'videocam', label: 'Conecta tus cámaras', desc: 'RTSP/ONVIF — sin hardware adicional' },
-  { icon: 'dvr', label: 'Edge Processing', desc: 'IA corre localmente en tu infraestructura' },
-  { icon: 'memory', label: 'Modelos AI', desc: 'Detección, tracking y analítica espacial' },
-  { icon: 'dashboard', label: 'Dashboard en Vivo', desc: 'Métricas operacionales en tiempo real' },
-  { icon: 'insights', label: 'Insights Accionables', desc: 'Alertas, reportes y copiloto AI' },
-]
-
-const stats = [
-  { value: '0', label: 'Cámaras nuevas requeridas' },
-  { value: '100%', label: 'Procesado en tu red local' },
-  { value: '<3 días', label: 'Tiempo de implementación' },
-  { value: '0', label: 'Datos biométricos almacenados' },
+  { icon: 'videocam',       title: 'Conecta tus cámaras',    desc: 'Protocolo RTSP/ONVIF — cualquier cámara IP existente.' },
+  { icon: 'memory',         title: 'Procesamiento Edge',      desc: 'Los modelos AI corren en tu infraestructura, sin enviar video.' },
+  { icon: 'cloud_sync',     title: 'Solo metadatos al cloud', desc: 'Conteos, zonas y eventos anonimizados — sin biometría.' },
+  { icon: 'dashboard',      title: 'Dashboard en tiempo real',desc: 'Heatmaps, alertas y KPIs desde cualquier dispositivo.' },
+  { icon: 'auto_awesome',   title: 'Copiloto AI',             desc: 'Consulta tus datos en lenguaje natural, sin reportes manuales.' },
 ]
 
 export default function HomePage() {
   return (
-    <main className="flex-grow pt-[80px]">
-      <section className="relative bg-grid-pattern overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-background via-background/95 to-background pointer-events-none" />
-        <div className="relative max-w-container-max mx-auto px-gutter py-xxl md:py-[96px]">
-          <div className="grid md:grid-cols-2 gap-xl items-center">
+    <main>
+
+      {/* ── HERO — Light split layout ── */}
+      <section className="relative bg-white pt-20 md:pt-28 pb-14 md:pb-20 overflow-hidden">
+        <div className="line-grid absolute inset-0" />
+        <div className="absolute inset-0 pointer-events-none"
+          style={{ background: 'radial-gradient(ellipse 60% 40% at 50% 0%, rgba(99,102,241,0.07) 0%, transparent 65%)' }} />
+
+        <div className="relative z-10 max-w-container-max mx-auto px-6">
+          <div className="grid md:grid-cols-2 gap-10 items-center">
+
+            {/* Left */}
             <div>
-              <div className="inline-flex items-center gap-2 bg-primary-fixed rounded-full px-3 py-1 mb-6">
-                <span className="material-symbols-outlined text-primary text-sm">auto_awesome</span>
-                <span className="text-label-caps font-label-caps text-primary uppercase">AI-Native Spatial Intelligence</span>
+              <div className="badge-announce mb-8 w-fit">
+                <span className="badge-new-pill">NUEVO</span>
+                Traxia Copiloto AI ya está disponible
               </div>
-              <h1 className="text-display font-display text-on-surface mb-6">
-                Convierte tus cámaras en inteligencia operacional
+
+              <h1 className="text-[38px] sm:text-[52px] lg:text-[60px] leading-[1.07] font-black tracking-tight text-on-surface mb-3">
+                Analítica de IA Edge
               </h1>
-              <p className="text-body-lg text-on-surface-variant mb-8 max-w-lg">
-                Traxia Analytics transforma tu infraestructura CCTV existente en analítica espacial en tiempo real — sin reemplazar hardware, sin datos biométricos.
+              <p className="text-[38px] sm:text-[52px] lg:text-[60px] leading-[1.07] font-black tracking-tight gradient-text-violet mb-6">
+                Sin Hardware
               </p>
+
+              <p className="text-[17px] text-on-surface-variant leading-relaxed mb-8 max-w-[480px]">
+                Transforma tu infraestructura de CCTV existente en una poderosa plataforma de inteligencia espacial. Analiza comportamiento, tráfico y operaciones sin capturar un solo dato biométrico. Creado para empresas B2B2B.
+              </p>
+
               <div className="flex flex-wrap gap-3 mb-10">
-                <button className="px-6 py-3 bg-primary text-on-primary rounded-xl font-medium text-body-md hover:bg-primary/90 transition-colors">
+                <Link href="/#demo" className="btn-gradient px-6 py-3.5 rounded-xl text-[15px]">
                   Agendar Demo
-                </button>
-                <Link href="/precios" className="px-6 py-3 bg-surface-container text-on-surface rounded-xl font-medium text-body-md hover:bg-surface-container-high transition-colors">
-                  Ver Precios
+                </Link>
+                <Link href="/retail" className="btn-outline px-6 py-3.5 rounded-xl text-[15px]">
+                  Explorar Plataforma
                 </Link>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="flex -space-x-2">
-                  {['#4200d8', '#603be2', '#605a7a', '#4813cb'].map((color, i) => (
-                    <div key={i} className="w-8 h-8 rounded-full border-2 border-background" style={{ backgroundColor: color }} />
-                  ))}
-                </div>
-                <p className="text-body-sm text-on-surface-variant">
-                  <span className="font-medium text-on-surface">+50 empresas</span> confían en Traxia
-                </p>
+
+              {/* Trust badges */}
+              <div className="flex flex-wrap items-center gap-4">
+                {[
+                  { icon: 'verified_user', label: 'Zero Biometrics' },
+                  { icon: 'memory',        label: 'Edge-native AI' },
+                  { icon: 'bolt',          label: 'Deploy en < 24 h' },
+                ].map((b) => (
+                  <div key={b.label} className="flex items-center gap-1.5 text-[13px] text-on-surface-variant">
+                    <span className="material-symbols-outlined text-primary text-[15px]">{b.icon}</span>
+                    {b.label}
+                  </div>
+                ))}
               </div>
             </div>
+
+            {/* Right — Product mockup */}
             <div className="relative">
-              <div className="bg-inverse-surface rounded-2xl p-6 aspect-video flex items-center justify-center relative overflow-hidden">
-                <div className="absolute inset-0 bg-grid-pattern opacity-20" />
-                <div className="relative z-10 text-center">
-                  <div className="inline-flex items-center justify-center w-20 h-20 bg-primary/20 rounded-2xl mb-4">
-                    <span className="material-symbols-outlined text-inverse-primary text-5xl">spatial_tracking</span>
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_24px_80px_rgba(0,0,0,0.12)] overflow-hidden">
+                {/* Titlebar */}
+                <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100 bg-slate-50">
+                  <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                  <div className="ml-3 flex-1">
+                    <div className="bg-white border border-slate-200 rounded-md px-3 py-1 text-[11px] text-slate-400 font-mono w-fit mx-auto">
+                      traxia.io/dashboard — Enterprise Spatial Intelligence
+                    </div>
                   </div>
-                  <p className="text-inverse-on-surface/70 text-body-sm font-code-data">LIVE SPATIAL INTELLIGENCE</p>
                 </div>
-                <div className="absolute top-4 left-4 bg-success/20 border border-success/40 rounded-lg px-3 py-1.5 flex items-center gap-1.5">
-                  <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
-                  <span className="text-success text-label-caps font-label-caps">LIVE</span>
+
+                {/* Header bar */}
+                <div className="flex items-center justify-between px-4 py-2 bg-white border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[12px] font-bold text-on-surface">Traxia Analytics</span>
+                    <span className="text-slate-300">|</span>
+                    <span className="text-[11px] text-slate-400">Lobby TA</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 rounded-full px-2.5 py-1">
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span className="text-[10px] font-bold text-emerald-600">NODO EDGE ACTIVO</span>
+                    </div>
+                    <span className="text-[10px] text-slate-400 font-mono">10:15:48 AM</span>
+                  </div>
                 </div>
-                <div className="absolute bottom-4 right-4 glass-card rounded-xl p-3">
-                  <p className="text-inverse-on-surface text-code-data font-code-data text-xs">Dwell: 4.2 min</p>
+
+                {/* Main content */}
+                <div className="grid sm:grid-cols-[160px_1fr_130px] grid-cols-1 h-[300px]">
+                  {/* Left panel — metrics (hidden on mobile) */}
+                  <div className="hidden sm:block border-r border-slate-100 p-3 space-y-3 bg-white">
+                    <div>
+                      <p className="text-[9px] uppercase tracking-widest text-slate-400 mb-1.5">Occupancy</p>
+                      <div className="text-[18px] font-black text-on-surface">68%</div>
+                      <div className="mt-2 flex items-end gap-0.5 h-10">
+                        {[40,55,70,60,80,68,75,68].map((h,i)=>(
+                          <div key={i} className="flex-1 rounded-sm" style={{height:`${h}%`, background: i===7?'#6366f1':'#e0e7ff'}} />
+                        ))}
+                      </div>
+                    </div>
+                    <div className="border-t border-slate-100 pt-3">
+                      <p className="text-[9px] uppercase tracking-widest text-slate-400 mb-1.5">Flow Rate</p>
+                      <div className="text-[18px] font-black text-on-surface">1.2 <span className="text-[11px] font-normal text-slate-400">P/s</span></div>
+                      <div className="mt-2 relative h-10">
+                        <svg viewBox="0 0 80 40" className="w-full h-full">
+                          <polyline points="0,32 10,28 20,20 30,24 40,12 50,16 60,8 70,14 80,10"
+                            fill="none" stroke="#6366f1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <polyline points="0,32 10,28 20,20 30,24 40,12 50,16 60,8 70,14 80,10 80,40 0,40"
+                            fill="rgba(99,102,241,0.08)" stroke="none"/>
+                        </svg>
+                      </div>
+                    </div>
+                    <div className="border-t border-slate-100 pt-3">
+                      <p className="text-[9px] uppercase tracking-widest text-slate-400 mb-1">Visitors</p>
+                      <div className="text-[20px] font-black text-on-surface">14.8K</div>
+                    </div>
+                  </div>
+
+                  {/* Center — CCTV mockup */}
+                  <div className="relative bg-slate-100 overflow-hidden">
+                    <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 300" preserveAspectRatio="none">
+                      <rect width="400" height="300" fill="#e2e8f0"/>
+                      <line x1="200" y1="60" x2="0"   y2="300" stroke="rgba(148,163,184,0.3)" strokeWidth="1"/>
+                      <line x1="200" y1="60" x2="130" y2="300" stroke="rgba(148,163,184,0.3)" strokeWidth="1"/>
+                      <line x1="200" y1="60" x2="270" y2="300" stroke="rgba(148,163,184,0.3)" strokeWidth="1"/>
+                      <line x1="200" y1="60" x2="400" y2="300" stroke="rgba(148,163,184,0.3)" strokeWidth="1"/>
+                      <line x1="60"  y1="160" x2="340" y2="160" stroke="rgba(148,163,184,0.25)" strokeWidth="1"/>
+                      <line x1="20"  y1="220" x2="380" y2="220" stroke="rgba(148,163,184,0.25)" strokeWidth="1"/>
+                      {/* Heatmap blobs */}
+                      <ellipse cx="220" cy="230" rx="65" ry="35" fill="rgba(99,102,241,0.2)"/>
+                      <ellipse cx="160" cy="190" rx="45" ry="25" fill="rgba(124,58,237,0.15)"/>
+                      <ellipse cx="290" cy="200" rx="40" ry="22" fill="rgba(16,185,129,0.13)"/>
+                      {/* Person boxes */}
+                      <rect x="90"  y="120" width="28" height="60" rx="2" fill="none" stroke="#6366f1" strokeWidth="1.5"/>
+                      <rect x="155" y="130" width="26" height="58" rx="2" fill="none" stroke="#6366f1" strokeWidth="1.5"/>
+                      <rect x="245" y="110" width="30" height="65" rx="2" fill="none" stroke="#7c3aed" strokeWidth="1.5"/>
+                      <rect x="305" y="125" width="27" height="60" rx="2" fill="none" stroke="#6366f1" strokeWidth="1.5"/>
+                      <rect x="200" y="140" width="25" height="55" rx="2" fill="none" stroke="#6366f1" strokeWidth="1.5"/>
+                      {/* Silhouettes */}
+                      <circle cx="104" cy="118" r="7" fill="#94a3b8"/>
+                      <rect x="97" y="126" width="14" height="20" rx="2" fill="#94a3b8"/>
+                      <circle cx="168" cy="128" r="7" fill="#94a3b8"/>
+                      <rect x="161" y="136" width="14" height="20" rx="2" fill="#94a3b8"/>
+                      <circle cx="260" cy="108" r="8" fill="#64748b"/>
+                      <rect x="252" y="117" width="16" height="22" rx="2" fill="#64748b"/>
+                      <circle cx="318" cy="123" r="7" fill="#94a3b8"/>
+                      <rect x="311" y="131" width="14" height="20" rx="2" fill="#94a3b8"/>
+                      <circle cx="212" cy="138" r="6" fill="#94a3b8"/>
+                      <rect x="206" y="145" width="12" height="18" rx="2" fill="#94a3b8"/>
+                    </svg>
+                    <div className="absolute top-6 left-1/2 -translate-x-1/2 text-[10px] font-black tracking-[0.3em] text-slate-400/30 uppercase">TRAXIA</div>
+                    <div className="absolute bottom-3 left-3 flex items-center gap-1.5 bg-white/90 rounded-full px-2.5 py-1 border border-slate-200">
+                      <span className="material-symbols-outlined text-emerald-500 text-[11px]">verified_user</span>
+                      <span className="text-[9px] font-semibold text-slate-600">Anonymized · Privacy Compliant</span>
+                    </div>
+                  </div>
+
+                  {/* Right panel (hidden on mobile) */}
+                  <div className="hidden sm:block border-l border-slate-100 bg-white p-3 space-y-2">
+                    <p className="text-[9px] uppercase tracking-widest text-slate-400">Security Alerts</p>
+                    {[
+                      { color: 'bg-emerald-400', label: 'Zone A — clear' },
+                      { color: 'bg-emerald-400', label: 'Zone B — clear' },
+                      { color: 'bg-amber-400',   label: 'Zone C — busy' },
+                    ].map((a,i) => (
+                      <div key={i} className="flex items-center gap-2 bg-slate-50 rounded-lg p-1.5">
+                        <div className={`w-1.5 h-1.5 rounded-full ${a.color}`} />
+                        <span className="text-[10px] text-slate-500">{a.label}</span>
+                      </div>
+                    ))}
+                    <div className="border-t border-slate-100 pt-2">
+                      <p className="text-[9px] uppercase tracking-widest text-slate-400 mb-1.5">Traffic Density</p>
+                      {['High','Mid','Low'].map((d,i)=>(
+                        <div key={i} className="flex items-center gap-1.5 mb-1">
+                          <span className="text-[9px] text-slate-400 w-7">{d}</span>
+                          <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                            <div className="h-full rounded-full bg-indigo-400" style={{width:`${[75,45,20][i]}%`}} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="border-t border-slate-100 pt-2">
+                      <p className="text-[9px] uppercase tracking-widest text-slate-400 mb-1">Events Log</p>
+                      {['10:15 — Zone C alert','10:12 — Peak detected','10:08 — New session'].map((e,i)=>(
+                        <p key={i} className="text-[9px] text-slate-400 font-mono leading-relaxed">{e}</p>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bottom metric bar */}
+                <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-t border-slate-100">
+                  <div className="flex items-center gap-6">
+                    <div>
+                      <p className="text-[9px] text-slate-400 uppercase tracking-widest">Ocupación Actual</p>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[20px] font-black text-on-surface">142</span>
+                        <span className="text-[12px] font-semibold text-emerald-500">↑ 12%</span>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-[9px] text-slate-400 uppercase tracking-widest">Permanencia</p>
+                      <span className="text-[18px] font-black text-on-surface">8.4 <span className="text-[11px] font-normal text-slate-400">min</span></span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="text-[10px] font-semibold text-emerald-600">EN VIVO</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -87,157 +284,290 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="py-xxl bg-surface-container-low">
-        <div className="max-w-container-max mx-auto px-gutter">
-          <div className="text-center mb-xl">
-            <p className="text-label-caps font-label-caps text-primary uppercase tracking-widest mb-3">Verticales</p>
-            <h2 className="text-headline-lg font-headline-lg text-on-surface">Diseñado para Verticales Clave</h2>
+      {/* ── VERTICALS — Lavender bg, white cards ── */}
+      <section className="py-24 bg-lavender">
+        <div className="max-w-container-max mx-auto px-6">
+          <div className="text-center mb-14">
+            <h2 className="text-[30px] font-black text-on-surface tracking-tight mb-3">
+              Diseñado para Verticales Clave
+            </h2>
+            <p className="text-[15px] text-on-surface-variant max-w-xl mx-auto">
+              Inteligencia adaptada para tus necesidades operativas específicas. Impleméntalo al instante con cero hardware nuevo.
+            </p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-md">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {verticals.map((v) => (
-              <Link
-                key={v.href}
-                href={v.href}
-                className="group bg-surface-container-lowest border border-border-subtle rounded-xl p-6 hover:border-primary/40 hover:shadow-md transition-all"
-              >
-                <div className="inline-flex items-center justify-center w-12 h-12 bg-primary-fixed rounded-xl mb-4 group-hover:bg-primary/10 transition-colors">
-                  <span className="material-symbols-outlined text-primary">{v.icon}</span>
+              <Link key={v.title} href={v.href}
+                className="bg-white border border-slate-200 rounded-2xl p-6 card-hover block group">
+                <div className="w-12 h-12 bg-lavender-mid rounded-xl flex items-center justify-center mb-5">
+                  <span className="material-symbols-outlined text-primary text-[22px]">{v.icon}</span>
                 </div>
-                <h3 className="text-headline-md font-headline-md text-on-surface mb-2">{v.label}</h3>
-                <p className="text-body-sm text-on-surface-variant mb-4">{v.desc}</p>
-                <span className="inline-flex items-center gap-1 text-primary text-body-sm font-medium">
+                <h3 className="text-[18px] font-bold text-on-surface mb-4">{v.title}</h3>
+                <div className="space-y-2 mb-5">
+                  {v.features.map((f) => (
+                    <div key={f.label} className="feature-pill">
+                      <span className="material-symbols-outlined text-[14px] text-primary">{f.icon}</span>
+                      {f.label}
+                    </div>
+                  ))}
+                </div>
+                <div className="text-[13px] font-semibold text-primary flex items-center gap-1.5 group-hover:gap-2 transition-all">
                   Más información
-                  <span className="material-symbols-outlined text-base">arrow_forward</span>
-                </span>
+                  <span className="material-symbols-outlined text-[16px] group-hover:translate-x-0.5 transition-transform">arrow_forward</span>
+                </div>
               </Link>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="py-xxl">
-        <div className="max-w-container-max mx-auto px-gutter">
-          <div className="text-center mb-xl">
-            <p className="text-label-caps font-label-caps text-primary uppercase tracking-widest mb-3">Cómo Funciona</p>
-            <h2 className="text-headline-lg font-headline-lg text-on-surface">Implementación Simple</h2>
-            <p className="text-body-lg text-on-surface-variant mt-3 max-w-2xl mx-auto">
-              Desde tus cámaras existentes hasta insights accionables en menos de 3 días.
-            </p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-md">
-            {steps.map((step, i) => (
-              <div key={i} className="relative flex flex-col items-center text-center">
-                {i < steps.length - 1 && (
-                  <div className="hidden lg:block absolute top-6 left-[calc(50%+24px)] right-0 h-px bg-border-subtle" />
-                )}
-                <div className="relative z-10 flex items-center justify-center w-12 h-12 bg-primary rounded-xl mb-4">
-                  <span className="material-symbols-outlined text-on-primary">{step.icon}</span>
-                </div>
-                <div className="inline-flex items-center justify-center w-5 h-5 bg-surface-container rounded-full text-label-caps font-label-caps text-on-surface-variant mb-2 text-xs">
-                  {i + 1}
-                </div>
-                <p className="text-body-md font-medium text-on-surface mb-1">{step.label}</p>
-                <p className="text-body-sm text-on-surface-variant">{step.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="py-xxl bg-surface-container-low">
-        <div className="max-w-container-max mx-auto px-gutter">
-          <div className="grid md:grid-cols-2 gap-xl items-center">
+      {/* ── COPILOTO AI — White bg, split ── */}
+      <section className="py-24 bg-white">
+        <div className="max-w-container-max mx-auto px-6">
+          <div className="grid md:grid-cols-2 gap-12 lg:gap-16 items-center">
+            {/* Left */}
             <div>
-              <p className="text-label-caps font-label-caps text-primary uppercase tracking-widest mb-3">Copiloto AI</p>
-              <h2 className="text-headline-lg font-headline-lg text-on-surface mb-4">
-                Tu analista de operaciones, siempre disponible
+              <div className="inline-flex items-center gap-2 bg-primary-fixed border border-primary-fixed-dim rounded-full px-3 py-1.5 mb-7">
+                <span className="material-symbols-outlined text-primary text-[14px]">auto_awesome</span>
+                <span className="text-[11px] font-bold text-primary uppercase tracking-widest">Copiloto AI</span>
+              </div>
+              <h2 className="text-[38px] font-black tracking-tight text-on-surface mb-5">
+                Habla con tus datos<br/>en tiempo real
               </h2>
-              <p className="text-body-lg text-on-surface-variant mb-6">
-                El Copiloto AI de Traxia responde preguntas en lenguaje natural sobre tus operaciones. Detecta anomalías, genera reportes y sugiere acciones correctivas.
+              <p className="text-[16px] text-on-surface-variant leading-relaxed mb-7">
+                Nuestro Copiloto AI te permite realizar consultas complejas en lenguaje natural. Olvida los reportes estáticos; pregunta directamente sobre el tráfico, comportamiento de clientes o alertas de seguridad y obtén respuestas visuales al instante.
               </p>
-              <ul className="flex flex-col gap-3 mb-8">
+              <ul className="space-y-3">
                 {[
-                  'Alertas en tiempo real con contexto espacial',
-                  'Reportes automáticos configurables',
-                  'Integración con Slack, Teams y email',
-                  'Historial y tendencias de hasta 12 meses',
-                ].map((item, i) => (
-                  <li key={i} className="flex items-start gap-3">
-                    <span className="material-symbols-outlined text-success text-base mt-0.5">check_circle</span>
-                    <span className="text-body-md text-on-surface-variant">{item}</span>
+                  'Análisis conversacional de video',
+                  'Generación automática de gráficos',
+                  'Alertas predictivas inteligentes',
+                ].map((item) => (
+                  <li key={item} className="flex items-center gap-3">
+                    <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+                      <svg className="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <span className="text-[15px] text-on-surface">{item}</span>
                   </li>
                 ))}
               </ul>
-              <button className="px-6 py-3 bg-primary text-on-primary rounded-xl font-medium text-body-md hover:bg-primary/90 transition-colors">
-                Ver Demostración
-              </button>
             </div>
-            <div className="bg-inverse-surface rounded-2xl p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-3 h-3 rounded-full bg-error/60" />
-                <div className="w-3 h-3 rounded-full bg-[#FBBF24]/60" />
-                <div className="w-3 h-3 rounded-full bg-success/60" />
-                <span className="text-inverse-on-surface/40 text-code-data font-code-data text-xs ml-2">traxia-copilot</span>
+
+            {/* Right — Dashboard + Chat mockup */}
+            <div className="relative">
+              {/* Main dashboard */}
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-lg overflow-hidden">
+                <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100">
+                  <span className="text-[13px] font-black text-primary tracking-tight">TRAXIA</span>
+                  <div className="flex items-center gap-4 ml-2">
+                    {[['VISITAS HOY','1,245'],['VENTAS','1,747'],['ALERTAS','163']].map(([k,v])=>(
+                      <div key={k}>
+                        <p className="text-[9px] text-slate-400 uppercase tracking-widest">{k}</p>
+                        <p className="text-[15px] font-black text-on-surface">{v}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                {/* Heatmap area */}
+                <div className="relative h-44 overflow-hidden bg-slate-800">
+                  <svg className="w-full h-full" viewBox="0 0 400 176" preserveAspectRatio="none">
+                    <rect width="400" height="176" fill="#1e293b"/>
+                    <ellipse cx="130" cy="100" rx="80" ry="45" fill="rgba(99,102,241,0.35)"/>
+                    <ellipse cx="260" cy="80"  rx="100" ry="55" fill="rgba(124,58,237,0.25)"/>
+                    <ellipse cx="330" cy="130" rx="65"  ry="35" fill="rgba(16,185,129,0.2)"/>
+                    <ellipse cx="190" cy="120" rx="60"  ry="30" fill="rgba(99,102,241,0.2)"/>
+                    {[[65,65],[145,55],[215,60],[295,70],[345,63]].map(([x,y],i)=>(
+                      <g key={i}>
+                        <rect x={x-11} y={y} width="22" height="48" rx="2" fill="none" stroke={i%2===0?'#6366f1':'#a78bfa'} strokeWidth="1.5"/>
+                        <circle cx={x} cy={y-2} r="7" fill="#94a3b8"/>
+                        <rect x={x-6} y={y+6} width="12" height="18" rx="2" fill="#94a3b8"/>
+                      </g>
+                    ))}
+                  </svg>
+                  <div className="absolute bottom-2 left-3 text-[9px] font-black tracking-[0.2em] text-white/20 uppercase">TRAXIA</div>
+                </div>
+                {/* Bottom charts */}
+                <div className="grid grid-cols-2 border-t border-slate-100">
+                  <div className="p-3 border-r border-slate-100">
+                    <p className="text-[9px] text-slate-400 uppercase tracking-widest mb-2">Visitas por hora</p>
+                    <div className="flex items-end gap-0.5 h-9">
+                      {[30,50,40,70,60,85,75,90].map((h,i)=>(
+                        <div key={i} className="flex-1 rounded-sm" style={{height:`${h}%`, background:i===7?'#6366f1':'#e0e7ff'}}/>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="p-3">
+                    <p className="text-[9px] text-slate-400 uppercase tracking-widest mb-2">Tendencia semanal</p>
+                    <svg viewBox="0 0 100 36" className="w-full h-9">
+                      <polyline points="0,30 14,24 28,20 42,22 56,12 70,16 84,7 100,9"
+                        fill="none" stroke="#6366f1" strokeWidth="2" strokeLinecap="round"/>
+                      <polyline points="0,30 14,24 28,20 42,22 56,12 70,16 84,7 100,9 100,36 0,36"
+                        fill="rgba(99,102,241,0.08)" stroke="none"/>
+                    </svg>
+                  </div>
+                </div>
               </div>
-              <div className="space-y-3">
-                <div className="bg-white/5 rounded-lg p-3">
-                  <p className="text-inverse-on-surface/60 text-code-data font-code-data text-xs mb-1">Usuario</p>
-                  <p className="text-inverse-on-surface text-body-sm">¿Cuál fue la zona con mayor tráfico hoy?</p>
+
+              {/* Chat panel floating — only on desktop to avoid overflow */}
+              <div className="hidden lg:block absolute -right-3 top-6 w-52 bg-white rounded-xl border border-slate-200 shadow-[0_12px_40px_rgba(0,0,0,0.12)] overflow-hidden">
+                <div className="flex items-center justify-between px-3 py-2.5 bg-primary">
+                  <div className="flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-white text-[13px]">auto_awesome</span>
+                    <span className="text-[10px] font-bold text-white">COPILOTO AI</span>
+                  </div>
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse"/>
                 </div>
-                <div className="bg-primary/20 rounded-lg p-3">
-                  <p className="text-inverse-primary text-code-data font-code-data text-xs mb-1">Copiloto AI</p>
-                  <p className="text-inverse-on-surface text-body-sm">La Zona B (Entrada Principal) registró 847 personas entre 12:00-14:00h, un 34% más que ayer. Tiempo promedio de permanencia: 4.2 min.</p>
+                <div className="p-3 space-y-2.5">
+                  <div className="flex justify-end">
+                    <div className="bg-primary-fixed rounded-xl rounded-tr-sm px-2.5 py-1.5 max-w-[80%]">
+                      <p className="text-[10px] text-primary font-medium">¿Cuántos clientes visitaron hoy?</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-1.5 items-start">
+                    <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                      <span className="material-symbols-outlined text-primary text-[10px]">auto_awesome</span>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-on-surface-variant leading-relaxed">Visitas de hoy: <strong className="text-on-surface">1,245</strong>. Aquí están los datos.</p>
+                      <div className="mt-1.5 flex items-end gap-0.5 h-6">
+                        {[40,55,45,70,60,85,75,90].map((h,i)=>(
+                          <div key={i} className="flex-1 rounded-sm" style={{height:`${h}%`, background:i===7?'#6366f1':'#e0e7ff'}}/>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <p className="text-inverse-on-surface/40 text-code-data font-code-data text-xs text-center pt-1">Ejemplo ilustrativo — datos de muestra, no de cliente real</p>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="py-xxl">
-        <div className="max-w-container-max mx-auto px-gutter">
-          <div className="text-center mb-xl">
-            <p className="text-label-caps font-label-caps text-primary uppercase tracking-widest mb-3">Resultados</p>
-            <h2 className="text-headline-lg font-headline-lg text-on-surface">Impacto Operacional Medido</h2>
+      {/* ── HOW IT WORKS ── */}
+      <section className="py-24 bg-lavender">
+        <div className="max-w-container-max mx-auto px-6">
+          <div className="text-center mb-14">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-primary mb-3">Funcionamiento</p>
+            <h2 className="text-[30px] font-black text-on-surface tracking-tight">De cámaras existentes a decisiones en minutos</h2>
           </div>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-md">
-            {stats.map((stat, i) => (
-              <div key={i} className="text-center bg-surface-container-low rounded-xl p-6">
-                <p className="text-display font-display text-primary mb-2">{stat.value}</p>
-                <p className="text-body-sm text-on-surface-variant">{stat.label}</p>
+          <div className="relative">
+            <div className="hidden lg:block absolute top-7 left-[calc(10%+28px)] right-[calc(10%+28px)] h-px bg-primary-fixed-dim z-0" />
+            <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-6 relative z-10">
+              {steps.map((s, i) => (
+                <div key={i} className="text-center">
+                  <div className="w-14 h-14 bg-white border-2 border-primary-fixed-dim rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
+                    <span className="material-symbols-outlined text-primary text-[24px]">{s.icon}</span>
+                  </div>
+                  <p className="text-[13px] font-bold text-on-surface mb-1.5">{s.title}</p>
+                  <p className="text-[12px] text-on-surface-variant leading-relaxed">{s.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── PRIVACY — Dark bento ── */}
+      <section className="py-24 hero-bg relative overflow-hidden">
+        <div className="dot-grid absolute inset-0 opacity-40" />
+        <div className="relative z-10 max-w-container-max mx-auto px-6">
+          <div className="text-center mb-14">
+            <div className="badge-ai inline-flex mx-auto mb-5">
+              <span className="material-symbols-outlined text-[14px]">shield</span>
+              Privacidad por Diseño
+            </div>
+            <h2 className="text-headline-lg text-white mb-3">Zero Biometrics. Siempre.</h2>
+            <p className="text-[15px] text-white/50 max-w-xl mx-auto">
+              Video procesado en el edge, nunca en la nube. Solo metadatos anonimizados salen de tus instalaciones.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[
+              { icon: 'videocam_off',      title: 'Sin video en la nube', desc: 'El video permanece en tu infraestructura. Solo conteos y coordenadas anonimizadas se sincronizan.' },
+              { icon: 'face_retouching_off', title: 'Zero Biometrics',    desc: 'Sin reconocimiento facial, sin huellas, sin datos personales. Cumplimiento por arquitectura, no por política.' },
+              { icon: 'memory',             title: 'Edge-native',          desc: 'Modelos AI ejecutándose en tu hardware local. Latencia mínima, máxima privacidad, funciona sin internet.' },
+            ].map((c, i) => (
+              <div key={i} className="glass-card glow-border rounded-2xl p-7">
+                <div className="w-11 h-11 bg-primary/10 border border-primary/20 rounded-xl flex items-center justify-center mb-5">
+                  <span className="material-symbols-outlined text-primary-light text-[20px]">{c.icon}</span>
+                </div>
+                <h3 className="text-[16px] font-bold text-white mb-2">{c.title}</h3>
+                <p className="text-[13px] text-white/50 leading-relaxed">{c.desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="py-xxl bg-surface-container-low" id="demo">
-        <div className="max-w-container-max mx-auto px-gutter">
-          <div className="max-w-2xl mx-auto">
-            <div className="text-center mb-xl">
-              <p className="text-label-caps font-label-caps text-primary uppercase tracking-widest mb-3">Contacto</p>
-              <h2 className="text-headline-lg font-headline-lg text-on-surface">Agenda tu demo personalizada</h2>
-              <p className="text-body-lg text-on-surface-variant mt-3">
-                Muéstranos tu operación y te mostramos cómo Traxia transforma tus datos espaciales en decisiones.
+      {/* ── DEMO FORM ── */}
+      <section id="demo" className="py-24 bg-white">
+        <div className="max-w-container-max mx-auto px-6">
+          <div className="grid md:grid-cols-2 gap-12 lg:gap-16 items-start">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-primary mb-3">Demo Gratuita</p>
+              <h2 className="text-[34px] font-black tracking-tight text-on-surface mb-4">
+                Ve Traxia en acción con tus propias cámaras
+              </h2>
+              <p className="text-[16px] text-on-surface-variant leading-relaxed mb-8">
+                Agenda una sesión personalizada. Nuestro equipo preparará una demo con los datos de tu operación específica — sin compromiso.
               </p>
+              <div className="space-y-4">
+                {[
+                  { icon: 'schedule',         text: 'Respuesta en menos de 24 horas' },
+                  { icon: 'settings_suggest', text: 'Demo adaptada a tu vertical e infraestructura' },
+                  { icon: 'lock',             text: 'Sin instalaciones previas, sin compromiso' },
+                ].map((item) => (
+                  <div key={item.text} className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-primary-fixed flex items-center justify-center shrink-0">
+                      <span className="material-symbols-outlined text-primary text-[18px]">{item.icon}</span>
+                    </div>
+                    <span className="text-[14px] text-on-surface-variant">{item.text}</span>
+                  </div>
+                ))}
+              </div>
             </div>
             <DemoForm />
           </div>
         </div>
       </section>
 
-      <section className="py-xxl">
-        <div className="max-w-container-max mx-auto px-gutter">
-          <div className="max-w-3xl mx-auto">
-            <div className="text-center mb-xl">
-              <p className="text-label-caps font-label-caps text-primary uppercase tracking-widest mb-3">FAQ</p>
-              <h2 className="text-headline-lg font-headline-lg text-on-surface">Preguntas Frecuentes</h2>
-            </div>
+      {/* ── FAQ ── */}
+      <section className="py-20 bg-lavender">
+        <div className="max-w-container-max mx-auto px-6">
+          <div className="text-center mb-12">
+            <h2 className="text-[28px] font-black tracking-tight text-on-surface">Preguntas frecuentes</h2>
+          </div>
+          <div className="max-w-2xl mx-auto">
             <FAQ />
           </div>
         </div>
       </section>
+
+      {/* ── FINAL CTA — Dark ── */}
+      <section className="py-24 hero-bg relative overflow-hidden">
+        <div className="dot-grid absolute inset-0 opacity-30" />
+        <div className="absolute inset-0 pointer-events-none"
+          style={{background:'radial-gradient(ellipse 60% 50% at 50% 50%, rgba(99,102,241,0.15) 0%, transparent 70%)'}}/>
+        <div className="relative z-10 max-w-container-max mx-auto px-6 text-center">
+          <h2 className="text-[36px] sm:text-[44px] font-black tracking-tight text-white mb-4">
+            Empieza en menos de 24 horas.
+          </h2>
+          <p className="text-[16px] text-white/50 max-w-lg mx-auto mb-10">
+            Sin hardware nuevo. Sin obras. Solo conecta tus cámaras existentes y empieza a tomar decisiones con datos reales.
+          </p>
+          <div className="flex flex-wrap gap-3 justify-center">
+            <Link href="/#demo" className="btn-gradient px-8 py-4 rounded-xl text-[15px]">
+              Agendar Demo Gratuita
+            </Link>
+            <Link href="/precios" className="px-8 py-4 rounded-xl text-[15px] font-semibold text-white/60 border border-white/10 hover:border-white/25 hover:text-white transition-all">
+              Ver Precios
+            </Link>
+          </div>
+        </div>
+      </section>
+
     </main>
   )
 }
